@@ -285,15 +285,51 @@ factory, so an `efbundle` (which builds the service provider) never runs them.
 
 ## 9. Frontend
 
-React + TypeScript. **Open**: framework (SPA or Next.js with a BFF), UI kit,
-data fetching, forms, the OpenAPI client generator, tests. Decided so far:
-the browser never holds a long-lived token in JavaScript if a BFF is chosen;
-the client is generated from the backend's OpenAPI document.
+**Next.js** (App Router) with its server half as the **BFF**: one
+deployable. **Tokens are issued by the backend** (OpenIddict) and only by it;
+the BFF holds them server-side and never mints tokens of its own. The
+browser sees an httpOnly session cookie, never a token.
+
+```
+browser (client components) ──► Next.js server (BFF) ──► backend /api/**
+          never a token             holds the tokens        validates them (JwtBearer)
+```
+
+- `/api/**` is forwarded as one catch-all, the access token attached, paths
+  and bodies untouched: the generated client calls relative paths on the
+  app's own origin.
+- `/connect/**` and `/.well-known/**` (OpenIddict) are proxied as navigation
+  (redirects returned, not followed) so the authorization server is the
+  app's origin.
+- A token, or anything derived from one, never crosses into a client
+  component's props.
+
+| Purpose | Package | Version |
+|---|---|---|
+| Framework | `next`, `react`, `react-dom` | 16.4, 19.3 |
+| UI | **shadcn/ui** (components copied into the repo) + `tailwindcss` 4, `lucide-react` icons | 4.3, 1.61 |
+| API client | `orval`: OpenAPI → TanStack Query hooks + zod schemas; no base URL, one `fetch` mutator | 8.45 |
+| Server state | `@tanstack/react-query`; live data by `refetchInterval` polling | 5.105 |
+| Forms, validation | `react-hook-form` + `@hookform/resolvers` + `zod` (generated where they mirror the contract, client-only rules composed on top) | 7.91, 6.0, 4.6 |
+| Passkeys | none: the native WebAuthn JSON API (`PublicKeyCredential.parseCreationOptionsFromJSON` ...); `@simplewebauthn/browser` only as a fallback | |
+| Theme | a cookie read server-side (no `next-themes`) | |
+| Tests | `vitest` + `@testing-library/react`; `@playwright/test` e2e (virtual authenticator for passkeys) | 5.0, 16.3, 1.64 |
+| Quality | TypeScript strict, ESLint, Prettier | |
+
+Versions are as of 2026-10-26; exact pins go into `package.json` with the
+scaffold.
+
+**Session: Auth.js** (`next-auth` 5, exact pin: still beta), an OIDC client
+of the backend's OpenIddict (authorization code + PKCE). Its JWE session
+cookie is an encrypted container of the backend's access and refresh tokens,
+not a token of its own; the refresh runs in the BFF. Chosen over a
+hand-written `openid-client` handler: sign-in, callback, refresh and
+sign-out come ready. Sign-out ends both sessions: Auth.js's and the one at
+the authorization server.
 
 ## 10. Open questions
 
 - Device authentication and pairing (§4.6).
 - How many store versions to keep, and whether the UI may restore an old one.
 - Audit module.
-- Frontend libraries (§9).
 - Hosting: Kubernetes or a single host with Docker Compose.

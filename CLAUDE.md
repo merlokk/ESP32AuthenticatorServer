@@ -13,7 +13,9 @@ Status: backend host skeleton (health, version, metrics); no modules yet.
 - **backend/**: .NET 10 **modular monolith**: one deployable, modules
   Identity and Sync, one PostgreSQL database with a schema per module;
   vertical feature slices over a horizontal domain model.
-- **frontend/**: React + TypeScript; libraries not chosen yet.
+- **frontend/**: Next.js + shadcn/ui + Tailwind, Orval + TanStack Query,
+  react-hook-form + zod. Its server half is the BFF (Auth.js): tokens are
+  issued by the backend only and never reach the browser.
 - Devices call the backend's device API directly; the browser goes through
   the frontend.
 
