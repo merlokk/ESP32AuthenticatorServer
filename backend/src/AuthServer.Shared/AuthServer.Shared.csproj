@@ -1,0 +1,5 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Cross-module primitives only: no entities, no domain logic (architecture.md §3 rule 4). -->
+
+</Project>

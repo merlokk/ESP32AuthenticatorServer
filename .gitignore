@@ -1,1 +1,55 @@
+# Patterns are unanchored: they match at any depth.
 
+# --- Secrets & local config ---
+.env
+.env.*
+!.env.example
+appsettings.Development.json
+appsettings.Local.json
+secrets.json
+*.pem
+*.key
+*.pfx
+
+# --- .NET ---
+[Bb]in/
+[Oo]bj/
+[Oo]ut/
+artifacts/
+*.user
+*.suo
+[Tt]est[Rr]esult*/
+*.coverage
+coverage.*.xml
+
+# --- Node / frontend ---
+node_modules/
+dist/
+build/
+.next/
+.vite/
+*.tsbuildinfo
+.eslintcache
+coverage/
+playwright-report/
+test-results/
+npm-debug.log*
+
+# --- Logs & temp ---
+logs/
+*.log
+tmp/
+
+# --- IDEs & OS ---
+.idea/
+.vs/
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+*.swp
+.DS_Store
+Thumbs.db
+
+# --- Claude Code ---
+.claude/settings.local.json
+.claude/worktrees/
