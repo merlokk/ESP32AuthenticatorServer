@@ -1,6 +1,7 @@
 # Architecture
 
-Status: the backend host exists (health, version, metrics); no modules yet.
+Status: the backend host (health, version, metrics) and the frontend
+skeleton (BFF proxy, Auth.js) exist; no modules yet, so no sign-in.
 Sections marked **open** are not decided.
 
 ## 1. Purpose
@@ -310,26 +311,50 @@ browser (client components) ──► Next.js server (BFF) ──► backend /ap
 | UI | **shadcn/ui** (components copied into the repo) + `tailwindcss` 4, `lucide-react` icons | 4.3, 1.61 |
 | API client | `orval`: OpenAPI → TanStack Query hooks + zod schemas; no base URL, one `fetch` mutator | 8.45 |
 | Server state | `@tanstack/react-query`; live data by `refetchInterval` polling | 5.105 |
-| Forms, validation | `react-hook-form` + `@hookform/resolvers` + `zod` (generated where they mirror the contract, client-only rules composed on top) | 7.91, 6.0, 4.6 |
+| Forms, validation | `react-hook-form` + `zod` (generated where they mirror the contract, client-only rules composed on top); the resolver is ours, `src/lib/zod-resolver.ts`: `@hookform/resolvers`' optional peers make `npm install` and `npm ci` disagree | 7.91, 4.6 |
 | Passkeys | none: the native WebAuthn JSON API (`PublicKeyCredential.parseCreationOptionsFromJSON` ...); `@simplewebauthn/browser` only as a fallback | |
 | Theme | a cookie read server-side (no `next-themes`) | |
-| Tests | `vitest` + `@testing-library/react`; `@playwright/test` e2e (virtual authenticator for passkeys) | 5.0, 16.3, 1.64 |
-| Quality | TypeScript strict, ESLint, Prettier | |
+| Tests | `vitest` + `@testing-library/react`; `@playwright/test` e2e (virtual authenticator for passkeys) | 4.1, 16.3, 1.64 |
+| Quality | TypeScript strict, ESLint, Prettier | 5.9, 9.39 |
 
-Versions are as of 2026-10-26; exact pins go into `package.json` with the
-scaffold.
+Every version is pinned exactly in `frontend/package.json` (`.npmrc`
+`save-exact`). Node 24 LTS (the image); vitest stays on 4.1 because 5
+refuses Node 25.
+
+**Layout** (`frontend/README.md` maps the files): `src/app/api/[...path]`,
+`src/app/connect/[...path]`, `src/app/.well-known/[...path]` are the
+forwarding routes over `src/lib/backend.ts` (server-only: hop-by-hop
+headers dropped, a browser `Authorization` never forwarded, cookies only on
+the OIDC routes, `X-Forwarded-Host/Proto` set); `src/app/health` is the
+frontend's own probe; `src/api/fetch.ts` the Orval mutator (Problem Details
+→ `ApiError`). `next.config.ts`: `output: "standalone"`, Cache Components
+on, so anything reading the session sits behind `<Suspense>`.
+
+**Image** (`frontend/Dockerfile`): `node:24-bookworm-slim`, `npm ci`,
+`next build`, runtime is `.next/standalone/server.js` with `static/` and
+`public/`, user `node`, port 3000.
 
 **Session: Auth.js** (`next-auth` 5, exact pin: still beta), an OIDC client
 of the backend's OpenIddict (authorization code + PKCE). Its JWE session
 cookie is an encrypted container of the backend's access and refresh tokens,
-not a token of its own; the refresh runs in the BFF. Chosen over a
-hand-written `openid-client` handler: sign-in, callback, refresh and
-sign-out come ready. Sign-out ends both sessions: Auth.js's and the one at
-the authorization server.
+not a token of its own. Chosen over a hand-written `openid-client` handler:
+sign-in, callback and sign-out come ready. Sign-out ends both sessions:
+Auth.js's and the one at the authorization server.
+
+- `basePath: "/auth"`, not `/api/auth`: `/api/**` is the backend's.
+- A public client: PKCE, no secret; scopes `openid profile offline_access`.
+- The session object (`GET /auth/session`, readable by the browser) carries
+  no token; the BFF reads the token with `getAccessToken(request)`.
+- **Token refresh: not built yet**, deliberately. Where the refreshed cookie
+  is written and how a rotated refresh token behaves under concurrent
+  requests are settled against the real Identity module. Until then an
+  expired access token shows as `session.error` and the user signs in
+  again.
 
 ## 10. Open questions
 
 - Device authentication and pairing (§4.6).
 - How many store versions to keep, and whether the UI may restore an old one.
 - Audit module.
+- Access token refresh in the BFF (§9).
 - Hosting: Kubernetes or a single host with Docker Compose.

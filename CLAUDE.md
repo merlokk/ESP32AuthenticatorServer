@@ -6,7 +6,8 @@ files (`vault.bin`, `fido.bin`) and gives every device of that user the
 newest copy. **Zero knowledge**: the server never has the PIN, the seed
 phrase or the key; it reads only the plain store header.
 
-Status: backend host skeleton (health, version, metrics); no modules yet.
+Status: backend host (health, version, metrics) and frontend skeleton (BFF
+proxy, Auth.js); no modules yet, so no sign-in.
 
 ## Overview
 
@@ -42,6 +43,21 @@ docker run --rm -p 8080:8080 authserver-backend:dev  # listens on 8080, non-root
 Probes: `/health/live`, `/health/ready`, `/health`, `/api/version`, `/metrics`.
 The product version is `<Version>` in `backend/Directory.Build.props`.
 
+Frontend (in `frontend/`; `.env.example` → `.env.local` first):
+
+```powershell
+npm ci
+npm run dev                    # http://localhost:3000
+npm run check                  # typecheck + lint + vitest
+npm run e2e                    # Playwright, production build (npm run build first)
+npm run api:generate           # Orval, needs the backend's Swagger
+docker build -t authserver-frontend:dev frontend
+```
+
+Next.js 16 differs from older versions (`proxy.ts`, Cache Components): read
+`frontend/node_modules/next/dist/docs/` before writing Next code
+(`frontend/AGENTS.md`).
+
 ## Rules
 
 - All docs and code comments are in English. Reply in the language of the
@@ -64,3 +80,6 @@ The product version is `<Version>` in `backend/Directory.Build.props`.
 - Store ciphertext, PINs, seed phrases and tokens never in logs or error
   responses.
 - Never serve a store version below what the device reports (rollback).
+- Frontend: the browser never calls the backend directly and never holds a
+  token; nothing token-derived goes into the Auth.js session or a client
+  component's props. npm versions pinned exactly.
