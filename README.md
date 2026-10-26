@@ -41,6 +41,10 @@ cd frontend && npm ci && npm run dev               # http://localhost:3000, see 
 
 Backend probes: `/health/live`, `/health/ready`, `/api/version`, `/metrics`.
 
+CI ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) tests both halves and pushes
+`ghcr.io/merlokk/esp32authenticatorserver-{backend,frontend}`: `sha-<short>` on every push,
+`latest` on main, `x.y.z` on a `vx.y.z` tag.
+
 ## Docs
 
 - [architecture.md](architecture.md): purpose, sync rule, modules, data,
