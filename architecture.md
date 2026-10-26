@@ -147,10 +147,21 @@ Api/Application/Domain/Infrastructure split). Today only `Host`, `Shared` and
 feature.
 
 **Image** (`backend/Dockerfile`): `sdk:10.0` restores from the project files
-alone (cached layer), publishes with `-p:Version=$VERSION`; runtime
-`aspnet:10.0`, non-root (`$APP_UID`), port 8080 (`Urls` overrides
-`appsettings.json`), `ASPNETCORE_ENVIRONMENT=Production`. Configuration
-comes from environment variables (`ConnectionStrings__AuthServer`, ...).
+alone (cached layer), publishes with `-p:Version=$VERSION` and
+`-p:SourceRevisionId=$COMMIT`; runtime `aspnet:10.0-noble-chiseled` (182 MB:
+no shell, no package manager, no ICU, no tzdata; the backend works in UTC),
+non-root (`$APP_UID`), port 8080 (the image's `ASPNETCORE_HTTP_PORTS`;
+`dotnet run` uses 5080 from `launchSettings.json`),
+`ASPNETCORE_ENVIRONMENT=Production`. No shell means no in-container
+healthcheck: probes come from outside. Configuration comes from environment
+variables (`ConnectionStrings__AuthServer`, ...).
+
+**Local stack** (`docker-compose.yml`, project `authserver`): `postgres:18`
+(volume `pgdata` at `/var/lib/postgresql`, `pg_isready` healthcheck),
+`backend`, `frontend` (healthcheck through `node`). Host ports 3100 / 5180 /
+5433 by default (`FRONTEND_PORT`, `BACKEND_PORT`, `POSTGRES_PORT` in `.env`),
+so the stack runs beside other local projects on 3000 / 5080 / 5432.
+`AUTH_SECRET` is required in `.env` (`.env.example`).
 
 ### 4.4 Slices
 
@@ -235,8 +246,9 @@ database
   `Npgsql` reference without a reason.
 - `dotnet ef` always names `--context` and `--project`; the startup project
   is the Host.
-- Local: PostgreSQL 18 in Docker (mind the PostgreSQL 18 volume path:
-  `/var/lib/postgresql`, not `/var/lib/postgresql/data`); migrations at
+- Local: PostgreSQL 18 in Docker (`docker-compose.yml`, host port 5433;
+  mind the PostgreSQL 18 volume path: `/var/lib/postgresql`, not
+  `/var/lib/postgresql/data`); migrations at
   startup or `dotnet ef database update` are fine locally.
 - Production: never migrate at startup. One EF migration bundle per context
   (framework-dependent, `--target-runtime linux-x64`), one migrations image,
@@ -252,7 +264,6 @@ a secret store in the cluster).
 
 ```json
 {
-  "Urls": "http://localhost:5080",
   "ConnectionStrings": { "AuthServer": "" },
   "Jobs": { "HistoryRetention": { "Succeeded": "2.00:00:00", "Unsuccessful": "30.00:00:00" } },
   "Identity": {

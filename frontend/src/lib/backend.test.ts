@@ -1,7 +1,37 @@
 import { describe, expect, it } from "vitest";
-import { downstreamResponseHeaders, upstreamRequestHeaders } from "./backend";
+import { downstreamResponseHeaders, publicUrl, upstreamRequestHeaders } from "./backend";
 
-const publicUrl = new URL("https://auth.example.com/api/devices?page=2");
+describe("publicUrl", () => {
+  // What the standalone server hands a route handler: its own bind address.
+  const bound = "http://0.0.0.0:3000/api/devices?page=2";
+
+  it("takes the browser's Host, not the bind address", () => {
+    const url = publicUrl(new Request(bound, { headers: { host: "localhost:3100" } }));
+    expect(url.href).toBe("http://localhost:3100/api/devices?page=2");
+  });
+
+  it("prefers the ingress's X-Forwarded-Host and -Proto", () => {
+    const url = publicUrl(
+      new Request(bound, {
+        headers: {
+          host: "frontend:3000",
+          "x-forwarded-host": "auth.example.com, proxy.internal",
+          "x-forwarded-proto": "https",
+        },
+      }),
+    );
+    expect(url.href).toBe("https://auth.example.com/api/devices?page=2");
+  });
+
+  it("ignores a scheme that is not http or https", () => {
+    const url = publicUrl(
+      new Request(bound, { headers: { host: "localhost:3100", "x-forwarded-proto": "ftp" } }),
+    );
+    expect(url.protocol).toBe("http:");
+  });
+});
+
+const pageUrl = new URL("https://auth.example.com/api/devices?page=2");
 
 describe("upstreamRequestHeaders", () => {
   const incoming = new Headers({
@@ -13,7 +43,7 @@ describe("upstreamRequestHeaders", () => {
   });
 
   it("attaches the session's token and drops the browser's", () => {
-    const headers = upstreamRequestHeaders(incoming, publicUrl, {
+    const headers = upstreamRequestHeaders(incoming, pageUrl, {
       accessToken: "from-session",
       forwardCookies: false,
     });
@@ -21,21 +51,21 @@ describe("upstreamRequestHeaders", () => {
   });
 
   it("never forwards a browser Authorization header", () => {
-    const headers = upstreamRequestHeaders(incoming, publicUrl, { forwardCookies: false });
+    const headers = upstreamRequestHeaders(incoming, pageUrl, { forwardCookies: false });
     expect(headers.has("authorization")).toBe(false);
   });
 
   it("keeps cookies out of /api/** and in for OIDC navigation", () => {
-    expect(
-      upstreamRequestHeaders(incoming, publicUrl, { forwardCookies: false }).has("cookie"),
-    ).toBe(false);
-    expect(
-      upstreamRequestHeaders(incoming, publicUrl, { forwardCookies: true }).get("cookie"),
-    ).toBe("authjs.session-token=secret");
+    expect(upstreamRequestHeaders(incoming, pageUrl, { forwardCookies: false }).has("cookie")).toBe(
+      false,
+    );
+    expect(upstreamRequestHeaders(incoming, pageUrl, { forwardCookies: true }).get("cookie")).toBe(
+      "authjs.session-token=secret",
+    );
   });
 
   it("drops hop-by-hop headers and states the public origin", () => {
-    const headers = upstreamRequestHeaders(incoming, publicUrl, { forwardCookies: false });
+    const headers = upstreamRequestHeaders(incoming, pageUrl, { forwardCookies: false });
     expect(headers.has("connection")).toBe(false);
     expect(headers.has("host")).toBe(false);
     expect(headers.get("accept")).toBe("application/json");

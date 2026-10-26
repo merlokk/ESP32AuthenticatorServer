@@ -43,6 +43,13 @@ docker run --rm -p 8080:8080 authserver-backend:dev  # listens on 8080, non-root
 Probes: `/health/live`, `/health/ready`, `/health`, `/api/version`, `/metrics`.
 The product version is `<Version>` in `backend/Directory.Build.props`.
 
+Whole stack in Docker (`.env.example` → `.env`, set `AUTH_SECRET`):
+
+```powershell
+docker compose up --build -d   # app :3100, backend :5180, PostgreSQL :5433
+docker compose down            # -v also drops the database volume
+```
+
 Frontend (in `frontend/`; `.env.example` → `.env.local` first):
 
 ```powershell

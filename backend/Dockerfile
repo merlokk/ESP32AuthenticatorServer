@@ -24,13 +24,15 @@ RUN dotnet publish src/AuthServer.Host/AuthServer.Host.csproj \
     -p:SourceRevisionId=${COMMIT} \
     -p:UseAppHost=false
 
-FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
+# Chiseled: no shell, no package manager, non-root by default. No ICU (globalization invariant)
+# and no tzdata: the backend works in UTC. Probes come from outside (no curl inside).
+FROM mcr.microsoft.com/dotnet/aspnet:10.0-noble-chiseled AS runtime
 WORKDIR /app
 COPY --from=build /app ./
 
-# Overrides appsettings.json's localhost URL; non-root, so a port above 1024.
-ENV Urls=http://+:8080 \
-    ASPNETCORE_ENVIRONMENT=Production
+# The base image listens on ASPNETCORE_HTTP_PORTS=8080 (non-root, so above 1024); dotnet run uses
+# launchSettings.json's 5080 instead.
+ENV ASPNETCORE_ENVIRONMENT=Production
 EXPOSE 8080
 USER $APP_UID
 

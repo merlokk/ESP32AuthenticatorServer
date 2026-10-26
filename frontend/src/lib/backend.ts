@@ -9,6 +9,21 @@ export function backendUrl(): string {
   return url.replace(/\/+$/, "");
 }
 
+/**
+ * The URL the browser asked for. Not `request.url`: the standalone server builds that from its own
+ * HOSTNAME:PORT (http://0.0.0.0:3000 in the image). Behind ingress X-Forwarded-Host/Proto carry the
+ * public origin (ingress overwrites them); without one, the browser's Host header does.
+ */
+export function publicUrl(request: Request): URL {
+  const url = new URL(request.url);
+  const first = (value: string | null) => value?.split(",")[0]?.trim() || undefined;
+  const host = first(request.headers.get("x-forwarded-host")) ?? request.headers.get("host");
+  const proto = first(request.headers.get("x-forwarded-proto"));
+  const scheme = proto === "http" || proto === "https" ? proto : url.protocol.replace(":", "");
+  // Built anew rather than by setting url.host: a host without a port keeps the old port there.
+  return new URL(`${url.pathname}${url.search}`, `${scheme}://${host ?? url.host}`);
+}
+
 // Hop-by-hop headers (RFC 9110 §7.6.1) and those fetch sets itself: never forwarded.
 const HOP_BY_HOP = new Set([
   "connection",
@@ -78,15 +93,15 @@ export function downstreamResponseHeaders(
  * The BFF renames nothing and decides nothing (architecture.md §9).
  */
 export async function forward(request: Request, options: ForwardOptions): Promise<Response> {
-  const publicUrl = new URL(request.url);
-  const target = `${backendUrl()}${publicUrl.pathname}${publicUrl.search}`;
+  const url = publicUrl(request);
+  const target = `${backendUrl()}${url.pathname}${url.search}`;
   const hasBody = request.method !== "GET" && request.method !== "HEAD";
 
   let upstream: Response;
   try {
     upstream = await fetch(target, {
       method: request.method,
-      headers: upstreamRequestHeaders(request.headers, publicUrl, options),
+      headers: upstreamRequestHeaders(request.headers, url, options),
       body: hasBody ? request.body : undefined,
       // Streams the body rather than buffering it (required by fetch for a stream body).
       ...(hasBody ? { duplex: "half" } : {}),

@@ -1,0 +1,75 @@
+# The whole product locally: PostgreSQL, the backend and the frontend (its BFF).
+#   copy .env.example .env      # then set AUTH_SECRET (npx auth secret)
+#   docker compose up --build -d
+#   http://localhost:3100       # the app; the backend is also on http://localhost:5180
+#
+# Host ports default to 3100 / 5180 / 5433 so the stack runs beside other local projects on
+# 3000 / 5080 / 5432; override with FRONTEND_PORT, BACKEND_PORT, POSTGRES_PORT in .env.
+#
+# Development only: the passwords below are local defaults, not secrets.
+
+name: authserver
+
+services:
+  postgres:
+    image: postgres:18
+    environment:
+      POSTGRES_DB: authserver
+      POSTGRES_USER: authserver
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-authserver_dev}
+    ports:
+      - "${POSTGRES_PORT:-5433}:5432"
+    volumes:
+      # PostgreSQL 18 keeps its data under /var/lib/postgresql/<major>/; mounting the pre-18
+      # /var/lib/postgresql/data path silently loses the data with the container.
+      - pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U authserver -d authserver"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  backend:
+    build:
+      context: backend
+      args:
+        VERSION: ${VERSION:-0.1.0}
+        COMMIT: ${COMMIT:-}
+    image: authserver-backend:dev
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__AuthServer: Host=postgres;Port=5432;Database=authserver;Username=authserver;Password=${POSTGRES_PASSWORD:-authserver_dev}
+    ports:
+      - "${BACKEND_PORT:-5180}:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    # No healthcheck: the chiseled image has no shell or curl. The frontend's /health and the
+    # backend's /health/ready are probed from the host.
+
+  frontend:
+    build:
+      context: frontend
+    image: authserver-frontend:dev
+    environment:
+      BACKEND_URL: http://backend:8080
+      AUTH_SECRET: ${AUTH_SECRET:?set AUTH_SECRET in .env (npx auth secret)}
+      AUTH_TRUST_HOST: "true"
+      # Auth.js's public URL: without ingress there is no X-Forwarded-Host, and the standalone
+      # server's own URL is its bind address (0.0.0.0:3000).
+      AUTH_URL: http://localhost:${FRONTEND_PORT:-3100}/auth
+      # The browser's origin: OIDC redirects must come back to the published port.
+      AUTH_AUTHSERVER_ISSUER: http://localhost:${FRONTEND_PORT:-3100}
+      AUTH_AUTHSERVER_ID: authserver-web
+    ports:
+      - "${FRONTEND_PORT:-3100}:3000"
+    depends_on:
+      - backend
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+volumes:
+  pgdata:

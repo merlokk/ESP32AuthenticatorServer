@@ -1,6 +1,7 @@
 import "server-only";
 import NextAuth from "next-auth";
 import { getToken } from "next-auth/jwt";
+import { publicUrl } from "@/lib/backend";
 
 // Auth.js as the BFF's session (architecture.md §9). The backend's OpenIddict issues every token;
 // the session cookie is only an encrypted container for them, and nothing here mints a token.
@@ -60,7 +61,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
  * the BFF attaches it upstream and the browser never sees it.
  */
 export async function getAccessToken(request: Request): Promise<string | undefined> {
-  const secureCookie = new URL(request.url).protocol === "https:";
+  // The cookie's name depends on the scheme the browser used (__Secure- prefix over https).
+  const secureCookie = publicUrl(request).protocol === "https:";
   const token = await getToken({ req: request, secret: process.env.AUTH_SECRET, secureCookie });
   if (!token?.accessToken) return undefined;
   if (token.expiresAt && Date.now() / 1000 >= token.expiresAt) return undefined;
