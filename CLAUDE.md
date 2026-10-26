@@ -31,12 +31,14 @@ in `backend/Directory.Packages.props`.
 
 ```powershell
 dotnet build backend\AuthServer.slnx                 # warnings are errors
+dotnet test backend\AuthServer.slnx
 dotnet run --project backend\src\AuthServer.Host     # http://localhost:5080
-docker build -t authserver-backend:dev --build-arg VERSION=0.1.0 backend
+docker build -t authserver-backend:dev --build-arg VERSION=0.1.0 --build-arg COMMIT=$(git rev-parse HEAD) backend
 docker run --rm -p 8080:8080 authserver-backend:dev  # listens on 8080, non-root
 ```
 
 Probes: `/health/live`, `/health/ready`, `/health`, `/api/version`, `/metrics`.
+The product version is `<Version>` in `backend/Directory.Build.props`.
 
 ## Rules
 

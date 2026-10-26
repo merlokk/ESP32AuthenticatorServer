@@ -136,12 +136,14 @@ backend/
     ├── AuthServer.ArchitectureTests/
     ├── AuthServer.Identity.Tests/
     ├── AuthServer.Sync.Tests/
+    ├── AuthServer.Host.Tests/           # the host's own wiring (WebApplicationFactory, no DB)
     └── AuthServer.IntegrationTests/     # Testcontainers PostgreSQL
 ```
 
 One implementation project per module (folders, not an
-Api/Application/Domain/Infrastructure split). Today only `Host` and `Shared`
-exist; modules and test projects come with the first feature.
+Api/Application/Domain/Infrastructure split). Today only `Host`, `Shared` and
+`Host.Tests` exist; modules and the other test projects come with the first
+feature.
 
 **Image** (`backend/Dockerfile`): `sdk:10.0` restores from the project files
 alone (cached layer), publishes with `-p:Version=$VERSION`; runtime
@@ -184,7 +186,7 @@ OpenTelemetry metrics, health checks.
 |---|---|
 | `/api/**` | FastEndpoints, `RoutePrefix = "api"` |
 | `/connect/**`, `/.well-known/**` | OpenIddict protocol endpoints |
-| `GET /api/version` | build version, anonymous |
+| `GET /api/version` | `{"version":"0.1.0","commit":"<sha>"}`, anonymous; minimal API, not a slice (answers when composition fails). `version`: `<Version>` in `Directory.Build.props` or `-p:Version`; `commit`: from git, or `-p:SourceRevisionId` (Docker `COMMIT`), null without one |
 | `/health/live` | process only, no checks |
 | `/health/ready`, `/health` | PostgreSQL check |
 | `/metrics` | Prometheus scrape |

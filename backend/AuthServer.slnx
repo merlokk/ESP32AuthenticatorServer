@@ -3,4 +3,7 @@
     <Project Path="src/AuthServer.Host/AuthServer.Host.csproj" />
     <Project Path="src/AuthServer.Shared/AuthServer.Shared.csproj" />
   </Folder>
+  <Folder Name="/test/">
+    <Project Path="test/AuthServer.Host.Tests/AuthServer.Host.Tests.csproj" />
+  </Folder>
 </Solution>

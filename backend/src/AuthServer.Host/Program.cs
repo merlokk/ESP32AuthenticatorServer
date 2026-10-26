@@ -40,8 +40,9 @@ app.UseForwardedHeaders();
 
 app.MapPrometheusScrapingEndpoint();
 
-// Which build is answering. Anonymous: the version is already in the image tag.
-app.MapGet("/api/version", () => TypedResults.Ok(new VersionResponse(ProductVersion.Value)))
+// Which build is answering. Anonymous: the version is already in the image tag. A minimal-API route,
+// not a slice: it is the one endpoint whose job is to answer when composition has gone wrong.
+app.MapGet("/api/version", () => TypedResults.Ok(new VersionResponse(ProductVersion.Value, ProductVersion.Commit)))
     .WithName("GetVersion")
     .WithTags("Host")
     .AllowAnonymous();

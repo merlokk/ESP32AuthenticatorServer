@@ -11,6 +11,10 @@
     <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleToAttribute">
       <_Parameter1>AuthServer.IntegrationTests</_Parameter1>
     </AssemblyAttribute>
+    <!-- The host's own unit tests: what they cover is internal and should stay so. -->
+    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleToAttribute">
+      <_Parameter1>AuthServer.Host.Tests</_Parameter1>
+    </AssemblyAttribute>
   </ItemGroup>
 
   <ItemGroup>

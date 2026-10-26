@@ -1,5 +1,6 @@
 # The backend image. Build context: backend/.
-#   docker build -t authserver-backend:dev --build-arg VERSION=0.1.0 backend
+#   docker build -t authserver-backend:dev --build-arg VERSION=0.1.0 \
+#     --build-arg COMMIT=$(git rev-parse HEAD) backend
 #   docker run --rm -p 8080:8080 -e ConnectionStrings__AuthServer="..." authserver-backend:dev
 
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
@@ -12,12 +13,15 @@ COPY src/AuthServer.Shared/AuthServer.Shared.csproj src/AuthServer.Shared/
 RUN dotnet restore src/AuthServer.Host/AuthServer.Host.csproj
 
 COPY src/ src/
-ARG VERSION=0.0.0
+# No .git in the context, so the commit comes in as an argument (GET /api/version shows it).
+ARG VERSION=0.1.0
+ARG COMMIT=
 RUN dotnet publish src/AuthServer.Host/AuthServer.Host.csproj \
     --configuration Release \
     --no-restore \
     --output /app \
     -p:Version=${VERSION} \
+    -p:SourceRevisionId=${COMMIT} \
     -p:UseAppHost=false
 
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
