@@ -1,0 +1,20 @@
+# LF in the repository and in every working copy, whatever core.autocrlf says.
+* text=auto eol=lf
+
+# Windows-only scripts need CRLF to run.
+*.cmd text eol=crlf
+*.bat text eol=crlf
+
+# Binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.webp binary
+*.pdf binary
+*.zip binary
+*.bin binary
+*.woff binary
+*.woff2 binary
+*.pfx binary
