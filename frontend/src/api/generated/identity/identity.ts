@@ -31,6 +31,7 @@ import type {
   CompletePasskeyRegistrationRequest,
   CompletePasskeySignInRequest,
   CompletePasskeySignInResponse,
+  ConfigurationResponse,
   DeviceResponse,
   InviteUserRequest,
   InviteUserResponse,
@@ -1719,6 +1720,107 @@ export function useGetDevice<TData = Awaited<ReturnType<typeof getDevice>>, TErr
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
   const queryOptions = getGetDeviceQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+export const getGetConfigurationUrl = () => {
+
+
+
+
+  return `/api/identity/configuration`
+}
+
+/**
+ * Read-only: it comes from appsettings and the environment. Durations in seconds; a secret only as set or not.
+ * @summary The Identity configuration the server runs with (admin).
+ */
+export const getConfiguration = async ( options?: Parameters<typeof customFetch>[1]): Promise<ConfigurationResponse> => {
+
+  return customFetch<ConfigurationResponse>(getGetConfigurationUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetConfigurationQueryKey = () => {
+    return [
+    `/api/identity/configuration`
+    ] as const;
+    }
+
+
+export const getGetConfigurationQueryOptions = <TData = Awaited<ReturnType<typeof getConfiguration>>, TError = void>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getConfiguration>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetConfigurationQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getConfiguration>>> = ({ signal }) => getConfiguration({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getConfiguration>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetConfigurationQueryResult = NonNullable<Awaited<ReturnType<typeof getConfiguration>>>
+export type GetConfigurationQueryError = void
+
+
+export function useGetConfiguration<TData = Awaited<ReturnType<typeof getConfiguration>>, TError = void>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getConfiguration>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getConfiguration>>,
+          TError,
+          Awaited<ReturnType<typeof getConfiguration>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetConfiguration<TData = Awaited<ReturnType<typeof getConfiguration>>, TError = void>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getConfiguration>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getConfiguration>>,
+          TError,
+          Awaited<ReturnType<typeof getConfiguration>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetConfiguration<TData = Awaited<ReturnType<typeof getConfiguration>>, TError = void>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getConfiguration>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary The Identity configuration the server runs with (admin).
+ */
+
+export function useGetConfiguration<TData = Awaited<ReturnType<typeof getConfiguration>>, TError = void>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getConfiguration>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetConfigurationQueryOptions(options)
 
   const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 

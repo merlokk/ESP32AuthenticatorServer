@@ -9,7 +9,7 @@ UC-2, 3 `RegistrationWindowTests`; UC-6 `DeviceSignInTests`; UC-9
 `TotpSignInTests` (+ `Identity.Tests/Domain/TotpTests`); UC-10, 12, 13
 `PasskeyTests`; UC-11 `AuthorizationCodeFlowTests`, `RenewalTests`,
 `EphemeralSigningKeyTests`; UC-14 to 19 `UserAdministrationTests`; UC-20, 21
-`ProfileTests`.
+`ProfileTests`; UC-22 `ConfigurationTests`.
 
 ## Identity
 
@@ -86,3 +86,6 @@ closes it (null).
   revoked. The last unblocked admin cannot be deleted.
 - [x] **UC-19 Role or block changes reach tokens**: a demoted, blocked or
   deleted user's refresh token stops working.
+- [x] **UC-22 Read the configuration** the server runs with (the `Identity`
+  section; durations in seconds, a secret only as set or not). Read-only: it
+  comes from appsettings and the environment.

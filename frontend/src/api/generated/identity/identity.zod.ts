@@ -233,6 +233,20 @@ export const GetDeviceResponse = zod.object({
 })
 
 /**
+ * Read-only: it comes from appsettings and the environment. Durations in seconds; a secret only as set or not.
+ * @summary The Identity configuration the server runs with (admin).
+ */
+export const GetConfigurationResponse = zod.object({
+  "publicOrigin": zod.string(),
+  "clientId": zod.string(),
+  "accessTokenLifetimeSeconds": zod.int(),
+  "refreshTokenLifetimeSeconds": zod.int(),
+  "inviteWindowSeconds": zod.int(),
+  "deviceWindowSeconds": zod.int(),
+  "totpEncryptionKeySet": zod.boolean()
+})
+
+/**
  * Sets the same cookie as the TOTP sign-in. Every refusal is the same 401 as the TOTP path.
  * @summary Sign in with the assertion the browser produced.
  */

@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
 import { AdminOnly } from "../admin-only";
+import { ConfigurationCard } from "./configuration-card";
 import { VersionsCard } from "./versions-card";
 
 export const metadata: Metadata = {
   title: "System · ESP32 Authenticator",
 };
 
-// The installation itself. Versions today; its configuration comes here later.
+// The installation itself: versions and the configuration it runs with.
 export default function SystemPage() {
   return (
     <>
@@ -14,6 +15,7 @@ export default function SystemPage() {
       <AdminOnly>
         <div className="flex max-w-3xl flex-col gap-6">
           <VersionsCard />
+          <ConfigurationCard />
         </div>
       </AdminOnly>
     </>

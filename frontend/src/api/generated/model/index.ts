@@ -12,6 +12,7 @@ export * from './changeRoleRequest';
 export * from './completePasskeyRegistrationRequest';
 export * from './completePasskeySignInRequest';
 export * from './completePasskeySignInResponse';
+export * from './configurationResponse';
 export * from './deviceResponse';
 export * from './inviteUserRequest';
 export * from './inviteUserResponse';
