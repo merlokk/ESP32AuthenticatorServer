@@ -2,7 +2,7 @@
 
 Status: backend host and the **Identity** module (device registration,
 TOTP and passkey sign-in, OIDC, user administration, profile); frontend: BFF
-proxy, Auth.js, sign-in, the app shell with dashboard and profile. Sync is not built. Use cases:
+proxy, Auth.js, sign-in, the app shell with dashboard, devices and profile. Sync is not built. Use cases:
 [use-cases.md](use-cases.md). Sections marked **open** are not decided.
 
 ## 1. Purpose
@@ -427,18 +427,21 @@ not a token of its own. Chosen over a hand-written `openid-client` handler:
 sign-in, callback and sign-out come ready. Sign-out ends both sessions:
 Auth.js's and the one at the authorization server.
 
-- Sign-in: `/sign-in?returnUrl=<app path>` starts the code flow at once
-  (server action); while the backend's cookie lives the browser comes back
-  signed in. Without it `/connect/authorize` sends the browser to
+- Sign-in: `GET /sign-in/start?returnUrl=<app path>` (a route) starts the
+  code flow; while the backend's cookie lives the browser comes back signed
+  in. Without it `/connect/authorize` sends the browser to
   `/sign-in?returnUrl=/connect/authorize…` (same-origin paths only), and only
   then the page shows the form: passkey or e-mail + code, posted from the
   browser (the cookie must land there), then back to `/connect/authorize`.
-  Sign-out clears Auth.js's session and goes through `/connect/endsession`;
-  the refresh token is not revoked yet.
-- The app (`src/app/(app)`): sidebar, page, the user's menu (Gravatar,
-  Profile, Sign out). Without a session the layout sends the browser to
-  `/sign-in?returnUrl=<path>`; an API 401 (token expired) does the same from
-  the query cache. `/` goes to `/dashboard` when signed in.
+  `POST /sign-out` (a form, same origin only) clears Auth.js's session and
+  goes through `/connect/endsession`; the refresh token is not revoked yet.
+  No server actions in sign-in or sign-out: an action's id changes with every
+  build, so a page loaded before a rollout would call one that is gone.
+- The app (`src/app/(app)`): sidebar (Dashboard, Devices), page, the user's
+  menu (Gravatar, Profile, Sign out). Devices: the list and the registration
+  window (open, extend, close; polled while open, a registration closes it).
+  Without a session the layout sends the browser to `/sign-in/start`; an API
+  401 (token expired) does the same from the query cache. `/` goes to `/dashboard` when signed in.
 - `basePath: "/auth"`, not `/api/auth`: `/api/**` is the backend's.
 - A public client: PKCE, no secret; scopes `openid profile offline_access`.
 - The session object (`GET /auth/session`, readable by the browser) carries

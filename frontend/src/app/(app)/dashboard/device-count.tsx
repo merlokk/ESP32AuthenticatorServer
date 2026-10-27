@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { Cpu } from "lucide-react";
 import { errorMessage } from "@/api/errors";
 import { useGetMyDevices } from "@/api/generated/identity/identity";
@@ -20,13 +21,17 @@ export function DeviceCount() {
           {isPending ? <Skeleton className="h-10 w-12" /> : (data?.devices.length ?? "—")}
         </CardTitle>
       </CardHeader>
-      {isError && (
-        <CardContent>
+      <CardContent>
+        {isError ? (
           <p role="alert" className="text-sm text-destructive">
             {errorMessage(error, "The devices could not be loaded.")}
           </p>
-        </CardContent>
-      )}
+        ) : (
+          <Link href="/devices" className="text-sm underline underline-offset-4">
+            View or add devices
+          </Link>
+        )}
+      </CardContent>
     </Card>
   );
 }

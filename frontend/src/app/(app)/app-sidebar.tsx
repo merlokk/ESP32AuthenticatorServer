@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, ShieldCheck } from "lucide-react";
+import { Cpu, LayoutDashboard, ShieldCheck } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -16,7 +16,10 @@ import {
 } from "@/components/ui/sidebar";
 
 // A section gets an entry when its page exists: no entry without a screen behind it.
-const SECTIONS = [{ href: "/dashboard", label: "Dashboard", icon: LayoutDashboard }];
+const SECTIONS = [
+  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/devices", label: "Devices", icon: Cpu },
+];
 
 export function AppSidebar() {
   const pathname = usePathname();
