@@ -18,6 +18,7 @@ COPY src/AuthServer.Host/AuthServer.Host.csproj src/AuthServer.Host/
 COPY src/AuthServer.Shared/AuthServer.Shared.csproj src/AuthServer.Shared/
 COPY src/Modules/Identity/AuthServer.Identity/AuthServer.Identity.csproj src/Modules/Identity/AuthServer.Identity/
 COPY src/Modules/Identity/AuthServer.Identity.Contracts/AuthServer.Identity.Contracts.csproj src/Modules/Identity/AuthServer.Identity.Contracts/
+COPY src/Modules/Sync/AuthServer.Sync/AuthServer.Sync.csproj src/Modules/Sync/AuthServer.Sync/
 # The bundle is published for --target-runtime, so the RID-specific assets must exist too.
 RUN dotnet restore src/AuthServer.Host/AuthServer.Host.csproj \
  && dotnet restore src/AuthServer.Host/AuthServer.Host.csproj --runtime linux-x64
@@ -35,6 +36,7 @@ RUN set -eu; \
     mkdir -p /migrations /sql; \
     for spec in \
         "identity:src/Modules/Identity/AuthServer.Identity:IdentityDbContext" \
+        "sync:src/Modules/Sync/AuthServer.Sync:SyncDbContext" \
     ; do \
         schema="${spec%%:*}"; rest="${spec#*:}"; \
         project="${rest%%:*}"; context="${rest#*:}"; \

@@ -5,6 +5,7 @@ using ArchUnitNET.xUnit;
 using AuthServer.Identity;
 using AuthServer.Identity.Contracts;
 using AuthServer.Shared;
+using AuthServer.Sync;
 using static ArchUnitNET.Fluent.ArchRuleDefinition;
 
 namespace AuthServer.ArchitectureTests;
@@ -13,11 +14,19 @@ namespace AuthServer.ArchitectureTests;
 public sealed class ModuleBoundaryTests
 {
     private static readonly Assembly Shared = typeof(Result).Assembly;
-    private static readonly Assembly Identity = typeof(IdentityModule).Assembly;
     private static readonly Assembly IdentityContracts = typeof(IdentityPolicies).Assembly;
 
+    // Each module: its assembly, its registration type and the Contracts it may reference besides Shared.
+    private static readonly Dictionary<string, (Assembly Assembly, System.Type Registration, string[] Contracts)> Modules = new()
+    {
+        ["Identity"] = (typeof(IdentityModule).Assembly, typeof(IdentityModule), ["AuthServer.Identity.Contracts"]),
+        ["Sync"] = (typeof(SyncModule).Assembly, typeof(SyncModule), ["AuthServer.Identity.Contracts"]),
+    };
+
+    public static TheoryData<string> ModuleNames => [.. Modules.Keys];
+
     private static readonly Architecture Architecture = new ArchLoader()
-        .LoadAssemblies(Shared, Identity, IdentityContracts)
+        .LoadAssemblies([Shared, IdentityContracts, .. Modules.Values.Select(module => module.Assembly)])
         .Build();
 
     [Fact]
@@ -34,44 +43,53 @@ public sealed class ModuleBoundaryTests
             .ShouldAllBe(name => name == "AuthServer.Shared");
     }
 
-    [Fact]
-    public void Identity_publishes_only_its_registration()
+    [Theory]
+    [MemberData(nameof(ModuleNames))]
+    public void A_module_publishes_only_its_registration(string name)
     {
+        var (assembly, registration, _) = Modules[name];
+
         // EF generates migrations public; they are no API.
-        Identity.GetExportedTypes()
-            .Where(type => type.Namespace != "AuthServer.Identity.Infrastructure.Persistence.Migrations")
+        assembly.GetExportedTypes()
+            .Where(type => type.Namespace != $"AuthServer.{name}.Infrastructure.Persistence.Migrations")
             .Select(type => type.FullName)
-            .ShouldBe([typeof(IdentityModule).FullName]);
+            .ShouldBe([registration.FullName]);
     }
 
-    [Fact]
-    public void A_module_references_only_Shared_and_Contracts_of_AuthServer()
+    [Theory]
+    [MemberData(nameof(ModuleNames))]
+    public void A_module_references_only_Shared_and_Contracts_of_AuthServer(string name)
     {
-        References(Identity)
-            .Where(name => name.StartsWith("AuthServer.", StringComparison.Ordinal))
-            .ShouldAllBe(name => name == "AuthServer.Shared" || name == "AuthServer.Identity.Contracts");
+        var (assembly, _, contracts) = Modules[name];
+
+        References(assembly)
+            .Where(reference => reference.StartsWith("AuthServer.", StringComparison.Ordinal))
+            .ShouldAllBe(reference => reference == "AuthServer.Shared" || contracts.Contains(reference));
     }
 
-    [Fact]
-    public void The_domain_depends_on_no_persistence_and_no_transport()
+    [Theory]
+    [MemberData(nameof(ModuleNames))]
+    public void The_domain_depends_on_no_persistence_and_no_transport(string name)
     {
-        Types().That().ResideInNamespace("AuthServer.Identity.Domain")
+        Types().That().ResideInNamespace($"AuthServer.{name}.Domain")
             .Should().NotDependOnAny(Types().That()
                 .ResideInNamespaceMatching(@"Microsoft\.EntityFrameworkCore.*")
                 .Or().ResideInNamespaceMatching(@"Microsoft\.AspNetCore\.Http.*")
                 .Or().ResideInNamespaceMatching(@"FastEndpoints.*")
                 .Or().ResideInNamespaceMatching(@"OpenIddict.*")
-                .Or().ResideInNamespaceMatching(@"AuthServer\.Identity\.(Features|Infrastructure).*"))
+                .Or().ResideInNamespaceMatching($@"AuthServer\.{name}\.(Features|Infrastructure).*"))
             .Check(Architecture);
     }
 
-    [Fact]
-    public void Slices_do_not_call_slices()
+    [Theory]
+    [MemberData(nameof(ModuleNames))]
+    public void Slices_do_not_call_slices(string name)
     {
-        var slices = Identity.GetTypes()
+        var features = $"AuthServer.{name}.Features.";
+        var slices = Modules[name].Assembly.GetTypes()
             .Select(type => type.Namespace)
             .OfType<string>()
-            .Where(name => name.StartsWith("AuthServer.Identity.Features.", StringComparison.Ordinal))
+            .Where(space => space.StartsWith(features, StringComparison.Ordinal))
             .Distinct()
             .ToList();
 
@@ -81,7 +99,7 @@ public sealed class ModuleBoundaryTests
         {
             Types().That().ResideInNamespace(slice)
                 .Should().NotDependOnAny(Types().That()
-                    .ResideInNamespaceMatching(@"AuthServer\.Identity\.Features\..*")
+                    .ResideInNamespaceMatching($@"AuthServer\.{name}\.Features\..*")
                     .And().DoNotResideInNamespace(slice))
                 .Check(Architecture);
         }

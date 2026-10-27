@@ -23,11 +23,13 @@
          the integration tests. -->
     <Compile Include="..\AuthServer.Identity.Tests\Passkeys\VirtualAuthenticator.cs" Link="Passkeys\VirtualAuthenticator.cs" />
     <Compile Include="..\AuthServer.Identity.Tests\Devices\VirtualDevice.cs" Link="Devices\VirtualDevice.cs" />
+    <Compile Include="..\AuthServer.Sync.Tests\StoreFiles.cs" Link="Sync\StoreFiles.cs" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\AuthServer.Host\AuthServer.Host.csproj" />
     <ProjectReference Include="..\..\src\Modules\Identity\AuthServer.Identity\AuthServer.Identity.csproj" />
+    <ProjectReference Include="..\..\src\Modules\Sync\AuthServer.Sync\AuthServer.Sync.csproj" />
   </ItemGroup>
 
 </Project>

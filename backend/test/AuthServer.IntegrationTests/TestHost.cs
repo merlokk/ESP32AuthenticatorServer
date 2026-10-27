@@ -10,6 +10,10 @@ internal static class TestHost
 
     public const string RelyingParty = "localhost";
 
+    public const int SyncVersionsToKeep = 3;
+
+    public const int SyncMaxFileBytes = 4096;
+
     public static readonly string RedirectUri = $"{PublicOrigin}/auth/callback/authserver";
 
     public static readonly string TotpEncryptionKey = Convert.ToBase64String(
@@ -28,5 +32,9 @@ internal static class TestHost
         // Short enough that expiry is testable, long enough for a slow run (plus 5 s skew).
         builder.UseSetting("Identity:AccessTokenLifetime", "00:00:02");
         builder.UseSetting("Identity:RefreshTokenLifetime", "01:00:00");
+
+        // Few enough that pruning is testable.
+        builder.UseSetting("Sync:VersionsToKeep", SyncVersionsToKeep.ToString(System.Globalization.CultureInfo.InvariantCulture));
+        builder.UseSetting("Sync:MaxFileBytes", SyncMaxFileBytes.ToString(System.Globalization.CultureInfo.InvariantCulture));
     }
 }

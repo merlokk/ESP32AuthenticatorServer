@@ -41,6 +41,7 @@
     <ProjectReference Include="..\AuthServer.Shared\AuthServer.Shared.csproj" />
     <ProjectReference Include="..\Modules\Identity\AuthServer.Identity\AuthServer.Identity.csproj" />
     <ProjectReference Include="..\Modules\Identity\AuthServer.Identity.Contracts\AuthServer.Identity.Contracts.csproj" />
+    <ProjectReference Include="..\Modules\Sync\AuthServer.Sync\AuthServer.Sync.csproj" />
   </ItemGroup>
 
 </Project>

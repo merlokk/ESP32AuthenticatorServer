@@ -1,4 +1,5 @@
 using AuthServer.Identity.Infrastructure.Persistence;
+using AuthServer.Sync.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -23,5 +24,10 @@ internal static class TestSchemas
 
         await using var identity = new IdentityDbContext(options.Options);
         await identity.Database.MigrateAsync();
+
+        await using var sync = new SyncDbContext(new DbContextOptionsBuilder<SyncDbContext>()
+            .UseNpgsql(connectionString, npgsql => npgsql.MigrationsHistoryTable("__EFMigrationsHistory", SyncDbContext.Schema))
+            .Options);
+        await sync.Database.MigrateAsync();
     }
 }

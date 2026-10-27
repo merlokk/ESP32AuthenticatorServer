@@ -12,6 +12,7 @@ COPY src/AuthServer.Host/AuthServer.Host.csproj src/AuthServer.Host/
 COPY src/AuthServer.Shared/AuthServer.Shared.csproj src/AuthServer.Shared/
 COPY src/Modules/Identity/AuthServer.Identity/AuthServer.Identity.csproj src/Modules/Identity/AuthServer.Identity/
 COPY src/Modules/Identity/AuthServer.Identity.Contracts/AuthServer.Identity.Contracts.csproj src/Modules/Identity/AuthServer.Identity.Contracts/
+COPY src/Modules/Sync/AuthServer.Sync/AuthServer.Sync.csproj src/Modules/Sync/AuthServer.Sync/
 RUN dotnet restore src/AuthServer.Host/AuthServer.Host.csproj
 
 COPY src/ src/

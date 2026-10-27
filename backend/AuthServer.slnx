@@ -7,10 +7,14 @@
     <Project Path="src/Modules/Identity/AuthServer.Identity/AuthServer.Identity.csproj" />
     <Project Path="src/Modules/Identity/AuthServer.Identity.Contracts/AuthServer.Identity.Contracts.csproj" />
   </Folder>
+  <Folder Name="/src/Modules/Sync/">
+    <Project Path="src/Modules/Sync/AuthServer.Sync/AuthServer.Sync.csproj" />
+  </Folder>
   <Folder Name="/test/">
     <Project Path="test/AuthServer.ArchitectureTests/AuthServer.ArchitectureTests.csproj" />
     <Project Path="test/AuthServer.Host.Tests/AuthServer.Host.Tests.csproj" />
     <Project Path="test/AuthServer.Identity.Tests/AuthServer.Identity.Tests.csproj" />
     <Project Path="test/AuthServer.IntegrationTests/AuthServer.IntegrationTests.csproj" />
+    <Project Path="test/AuthServer.Sync.Tests/AuthServer.Sync.Tests.csproj" />
   </Folder>
 </Solution>
