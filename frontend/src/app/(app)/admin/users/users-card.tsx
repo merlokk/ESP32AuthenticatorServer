@@ -2,9 +2,10 @@
 
 import { useState, type ReactNode } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Ban, CircleCheck, DoorOpen, Pencil, Trash2, UserPlus } from "lucide-react";
+import { Ban, ChevronDown, CircleCheck, DoorOpen, Pencil, Trash2, UserPlus } from "lucide-react";
 import { errorMessage } from "@/api/errors";
 import {
+  changeRole,
   closeRegistrationWindow,
   deleteUser,
   getGetUsersQueryKey,
@@ -22,6 +23,8 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
@@ -47,7 +50,13 @@ type Open =
   | { kind: "invite" }
   | { kind: "edit"; user: UserRow }
   | { kind: "block"; user: UserRow }
-  | { kind: "delete"; user: UserRow };
+  | { kind: "delete"; user: UserRow }
+  | { kind: "role"; user: UserRow; role: Role };
+
+// The two roles (use-cases.md: a column, no role tables).
+const ROLES = ["admin", "user"] as const;
+type Role = (typeof ROLES)[number];
+const ROLE_LABEL: Record<Role, string> = { admin: "Admin", user: "User" };
 
 export function UsersCard() {
   const queryClient = useQueryClient();
@@ -142,7 +151,49 @@ export function UsersCard() {
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell className="capitalize">{user.role}</TableCell>
+                    <TableCell>
+                      {self ? (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span tabIndex={0} className="capitalize">
+                              {user.role}
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipContent>You cannot change your own role</TooltipContent>
+                        </Tooltip>
+                      ) : (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="-ml-2.5 capitalize"
+                              aria-label={`Role of ${user.userName}: ${user.role}`}
+                              disabled={rowBusy}
+                            >
+                              {user.role}
+                              <ChevronDown aria-hidden />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="start">
+                            <DropdownMenuLabel>Role</DropdownMenuLabel>
+                            <DropdownMenuRadioGroup
+                              value={user.role}
+                              onValueChange={(role) =>
+                                role !== user.role &&
+                                setOpen({ kind: "role", user, role: role as Role })
+                              }
+                            >
+                              {ROLES.map((role) => (
+                                <DropdownMenuRadioItem key={role} value={role}>
+                                  {ROLE_LABEL[role]}
+                                </DropdownMenuRadioItem>
+                              ))}
+                            </DropdownMenuRadioGroup>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      )}
+                    </TableCell>
                     <TableCell>
                       <div className="flex flex-wrap gap-1">
                         {user.blocked && <Badge variant="destructive">Blocked</Badge>}
@@ -277,6 +328,27 @@ export function UsersCard() {
           destructive
           onConfirm={async () => {
             await setBlocked(open.user.id, { blocked: true });
+            await refresh();
+          }}
+          onClose={close}
+        />
+      )}
+      {open?.kind === "role" && (
+        <ConfirmDialog
+          title={
+            open.role === "admin"
+              ? `Make ${open.user.userName} an admin?`
+              : `Make ${open.user.userName} a user?`
+          }
+          description={
+            open.role === "admin"
+              ? "They can then manage users and see the system. It takes effect at their next token renewal or sign-in."
+              : "They lose admin rights at once: their sessions end and they sign in again as a user."
+          }
+          confirm={open.role === "admin" ? "Make admin" : "Make user"}
+          destructive={open.role !== "admin"}
+          onConfirm={async () => {
+            await changeRole(open.user.id, { role: open.role });
             await refresh();
           }}
           onClose={close}

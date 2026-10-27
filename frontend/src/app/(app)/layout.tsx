@@ -14,7 +14,8 @@ export default function AppLayout({ children }: LayoutProps<"/">) {
   return (
     <SidebarProvider>
       <AppSidebar />
-      <SidebarInset>
+      {/* SidebarInset is the <main>; min-w-0 lets a wide table scroll inside it, not the page. */}
+      <SidebarInset className="min-w-0">
         <header className="flex h-14 shrink-0 items-center gap-2 border-b px-4">
           <SidebarTrigger className="-ml-1" />
           <div className="flex-1" />
@@ -26,13 +27,13 @@ export default function AppLayout({ children }: LayoutProps<"/">) {
             </SessionGate>
           </Suspense>
         </header>
-        <main className="flex flex-1 flex-col gap-6 p-4 md:p-8">
+        <div className="flex min-w-0 flex-1 flex-col gap-6 p-4 md:p-8">
           <Suspense fallback={pageSkeleton}>
             <SessionGate fallback={<SignInRedirect />}>
               <ClientOnly fallback={pageSkeleton}>{children}</ClientOnly>
             </SessionGate>
           </Suspense>
-        </main>
+        </div>
       </SidebarInset>
     </SidebarProvider>
   );
