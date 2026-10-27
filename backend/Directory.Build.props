@@ -13,7 +13,7 @@
     <!-- The product version, one place; a release overrides it with -p:Version (the Docker build
          argument VERSION). The SDK appends +<commit> from git, or from -p:SourceRevisionId where
          there is no .git (the Docker build). GET /api/version answers both. -->
-    <Version>0.1.0</Version>
+    <Version>0.5.0</Version>
 
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>

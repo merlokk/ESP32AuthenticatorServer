@@ -2,7 +2,7 @@
 #   ghcr.io/merlokk/esp32authenticatorserver-backend
 #   ghcr.io/merlokk/esp32authenticatorserver-frontend
 #   ghcr.io/merlokk/esp32authenticatorserver-migrations  (the Job that runs before the backend rolls)
-# Tags: sha-<short> on every push, latest on main, <x.y.z> and <x.y> on a v<x.y.z> git tag.
+# Tags: sha-<short> on every push, latest on main, <x.y.z> and <x.y> on an x.y.z git tag (no "v").
 # Pull requests build the images without pushing.
 
 name: CI
@@ -10,7 +10,7 @@ name: CI
 on:
   push:
     branches: [main]
-    tags: ["v*"]
+    tags: ["[0-9]+.[0-9]+.[0-9]+"]
   pull_request:
   workflow_dispatch:
 
@@ -65,13 +65,14 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      # The product version: the git tag on a release, else <Version> in Directory.Build.props.
+      # The product version: <Version> in Directory.Build.props. A release tag must say the same,
+      # or the images would be tagged one version and report another at /api/version.
       - id: version
         run: |
-          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
-            v="${GITHUB_REF_NAME#v}"
-          else
-            v=$(sed -n 's:.*<Version>\(.*\)</Version>.*:\1:p' backend/Directory.Build.props)
+          v=$(sed -n 's:.*<Version>\(.*\)</Version>.*:\1:p' backend/Directory.Build.props)
+          if [[ "$GITHUB_REF" == refs/tags/* && "$GITHUB_REF_NAME" != "$v" ]]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match <Version>$v</Version>"
+            exit 1
           fi
           echo "version=$v" >> "$GITHUB_OUTPUT"
 

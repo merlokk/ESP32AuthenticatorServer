@@ -43,7 +43,7 @@ dotnet run --project backend\src\AuthServer.Host     # http://localhost:5080
 dotnet ef database update --project backend\src\Modules\Identity\AuthServer.Identity --startup-project backend\src\AuthServer.Host --context IdentityDbContext
 dotnet ef migrations add <Name> --project backend\src\Modules\Identity\AuthServer.Identity --startup-project backend\src\AuthServer.Host --context IdentityDbContext --output-dir Infrastructure/Persistence/Migrations
 docker build -f backend\migrations.Dockerfile -t authserver-migrations:dev backend
-docker build -t authserver-backend:dev --build-arg VERSION=0.1.0 --build-arg COMMIT=$(git rev-parse HEAD) backend
+docker build -t authserver-backend:dev --build-arg VERSION=0.5.0 --build-arg COMMIT=$(git rev-parse HEAD) backend
 docker run --rm -p 8080:8080 authserver-backend:dev  # listens on 8080, non-root
 ```
 

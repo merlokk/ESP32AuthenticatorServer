@@ -45,7 +45,7 @@ Backend probes: `/health/live`, `/health/ready`, `/api/version`, `/metrics`.
 
 CI ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) tests both halves and pushes
 `ghcr.io/merlokk/esp32authenticatorserver-{backend,frontend,migrations}`: `sha-<short>` on every push,
-`latest` on main, `x.y.z` on a `vx.y.z` tag.
+`latest` on main, `x.y.z` on an `x.y.z` tag (no `v`; it must equal `<Version>`).
 
 ## Docs
 

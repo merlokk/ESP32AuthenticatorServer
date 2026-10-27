@@ -46,7 +46,7 @@ services:
     build:
       context: backend
       args:
-        VERSION: ${VERSION:-0.1.0}
+        VERSION: ${VERSION:-0.5.0}
         COMMIT: ${COMMIT:-}
     image: authserver-backend:dev
     environment:
