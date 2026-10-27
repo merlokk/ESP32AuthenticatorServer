@@ -16,7 +16,7 @@ internal sealed class Endpoint(SyncDbContext context) : Endpoint<GetHeadsRequest
 
     public override void Configure()
     {
-        Post("/sync/device/heads");
+        Post("/device/stores/heads");
         Policies(IdentityPolicies.Device);
         Options(route => route.WithTags("Sync").WithName("GetHeads"));
         Summary(summary =>
@@ -24,7 +24,7 @@ internal sealed class Endpoint(SyncDbContext context) : Endpoint<GetHeadsRequest
             summary.Summary = "The newest version and time the server holds of each named store (device).";
             summary.Description =
                 "Up to 16 stores. version and modified are null for a store the server does not hold. Higher on the device: "
-                + "POST /api/sync/device/files; higher here: GET /api/sync/device/files/... ?above=<own version>.";
+                + "POST /api/device/stores/files; higher here: GET /api/device/stores/files/... ?above=<own version>.";
         });
     }
 
@@ -45,14 +45,14 @@ internal sealed class Endpoint(SyncDbContext context) : Endpoint<GetHeadsRequest
         var heads = await context.Stores
             .Where(store => store.UserId == owner)
             .Join(context.Versions, store => new { store.Id, store.HeadVersion }, version => new { Id = version.StoreRef, HeadVersion = version.Version },
-                (store, version) => new { store.StoreId, store.SeedId, store.Kind, version.Version, version.Modified })
+                (store, version) => new { store.StoreId, store.SeedId, store.Kind, version.Version, version.Modified, version.Nonce })
             .ToListAsync(cancellationToken);
 
         var answer = keys.Select(result =>
         {
             var key = result.Value;
             var head = heads.SingleOrDefault(store => store.StoreId == key.StoreId && store.SeedId == key.SeedId && store.Kind == key.Kind);
-            return new StoreHead(key.StoreId, key.SeedId, (int)key.Kind, head?.Version, head?.Modified);
+            return new StoreHead(key.StoreId, key.SeedId, (int)key.Kind, head?.Version, head?.Modified, head?.Nonce);
         });
 
         await Send.OkAsync(new GetHeadsResponse([.. answer]), cancellationToken);
@@ -70,4 +70,5 @@ internal sealed record GetHeadsResponse(IReadOnlyList<StoreHead> Stores);
 
 /// <param name="Version">Null: the server holds no copy.</param>
 /// <param name="Modified">Unix seconds by the uploading device's clock; 0 unknown; null: no copy.</param>
-internal sealed record StoreHead(string StoreId, string SeedId, int Kind, long? Version, long? Modified);
+/// <param name="Nonce">The newest copy's GCM nonce (hex): one counter with another nonce is another write.</param>
+internal sealed record StoreHead(string StoreId, string SeedId, int Kind, long? Version, long? Modified, string? Nonce);

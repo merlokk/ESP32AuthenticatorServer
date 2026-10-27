@@ -16,6 +16,7 @@ public sealed class StoreHeaderTests
             KeyId = Convert.FromHexString("1122334455667788"),
             StoreId = Convert.FromHexString("0011223344556677"),
             SeedId = Convert.FromHexString("deadbeef"),
+            Nonce = Convert.FromHexString("00112233445566778899aabb"),
             PayloadLength = 100,
         };
 
@@ -31,6 +32,7 @@ public sealed class StoreHeaderTests
         header.Value.KeyId.ShouldBe("1122334455667788");
         header.Value.StoreId.ShouldBe("0011223344556677");
         header.Value.SeedId.ShouldBe("deadbeef");
+        header.Value.Nonce.ShouldBe("00112233445566778899aabb");
     }
 
     [Fact]

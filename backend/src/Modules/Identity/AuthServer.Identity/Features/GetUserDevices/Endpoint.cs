@@ -1,3 +1,4 @@
+using System.Text.Json;
 using AuthServer.Identity.Contracts;
 using AuthServer.Identity.Domain;
 using AuthServer.Identity.Infrastructure.Http;
@@ -32,13 +33,32 @@ internal sealed class Endpoint(IdentityDbContext context) : EndpointWithoutReque
         var devices = await context.Devices
             .Where(device => device.UserId == id)
             .OrderBy(device => device.RegisteredAt)
-            .Select(device => new UserDevice(device.Id, device.Serial, device.Mac, device.RegisteredAt, device.LastSeenAt))
+            .Select(device => new { device.Id, device.Serial, device.Mac, device.RegisteredAt, device.LastSeenAt, device.Firmware, device.Status })
             .ToListAsync(cancellationToken);
 
-        await Send.OkAsync(new UserDevicesResponse(devices), cancellationToken);
+        // The report is kept as text (jsonb) and handed back as the object the device sent.
+        await Send.OkAsync(
+            new UserDevicesResponse([.. devices.Select(device => new UserDevice(
+                device.Id,
+                device.Serial,
+                device.Mac,
+                device.RegisteredAt,
+                device.LastSeenAt,
+                device.Firmware,
+                device.Status is null ? null : JsonDocument.Parse(device.Status).RootElement.Clone()))]),
+            cancellationToken);
     }
 }
 
 internal sealed record UserDevicesResponse(IReadOnlyList<UserDevice> Devices);
 
-internal sealed record UserDevice(Guid Id, string Serial, string Mac, DateTimeOffset RegisteredAt, DateTimeOffset? LastSeenAt);
+/// <param name="Firmware">From the last status report (POST /api/device/status); null before one.</param>
+/// <param name="Status">The last status report as the device sent it; null before one.</param>
+internal sealed record UserDevice(
+    Guid Id,
+    string Serial,
+    string Mac,
+    DateTimeOffset RegisteredAt,
+    DateTimeOffset? LastSeenAt,
+    string? Firmware,
+    JsonElement? Status);

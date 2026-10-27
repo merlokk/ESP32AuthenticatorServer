@@ -23,6 +23,7 @@ public sealed class ConfigurationTests(IdentityFixture fixture) : IClassFixture<
         configuration["inviteWindowSeconds"]!.GetValue<long>().ShouldBe(86400);
         configuration["deviceWindowSeconds"]!.GetValue<long>().ShouldBe(3600);
         configuration["totpEncryptionKeySet"]!.GetValue<bool>().ShouldBeTrue();
+        configuration["latestFirmware"]!.GetValue<string>().ShouldBe(TestHost.LatestFirmware);
         body.ShouldNotContain(TestHost.TotpEncryptionKey);
     }
 

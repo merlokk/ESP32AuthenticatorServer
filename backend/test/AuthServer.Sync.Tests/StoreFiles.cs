@@ -24,6 +24,9 @@ public sealed record StoreFile
 
     public uint KdfIterations { get; init; } = 200_000;
 
+    /// <summary>The GCM nonce: random on every write, so it tells two writes of one counter apart.</summary>
+    public byte[] Nonce { get; init; } = RandomNumberGenerator.GetBytes(12);
+
     public byte[] KeyId { get; init; } = Convert.FromHexString("0102030405060708");
 
     public byte[] StoreId { get; init; } = Convert.FromHexString("a1a2a3a4a5a6a7a8");
@@ -50,7 +53,7 @@ public sealed record StoreFile
         BinaryPrimitives.WriteUInt32LittleEndian(span[8..], Version);
         BinaryPrimitives.WriteUInt32LittleEndian(span[12..], (uint)LengthField);
         BinaryPrimitives.WriteInt64LittleEndian(span[16..], Modified);
-        RandomNumberGenerator.Fill(span.Slice(24, 12));
+        Nonce.CopyTo(span[24..]);
         BinaryPrimitives.WriteUInt32LittleEndian(span[36..], KdfIterations);
         RandomNumberGenerator.Fill(span.Slice(40, 16));
         KeyId.CopyTo(span[56..]);

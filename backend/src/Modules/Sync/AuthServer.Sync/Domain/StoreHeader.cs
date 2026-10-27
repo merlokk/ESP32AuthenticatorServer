@@ -32,7 +32,8 @@ internal sealed record StoreHeader(
     uint KdfIterations,
     string KeyId,
     string StoreId,
-    string SeedId)
+    string SeedId,
+    string Nonce)
 {
     public const int Size = 80;
     public const int TagSize = 16;
@@ -76,7 +77,8 @@ internal sealed record StoreHeader(
             KdfIterations: BinaryPrimitives.ReadUInt32LittleEndian(file[36..]),
             KeyId: Hex(file.Slice(56, 8)),
             StoreId: Hex(file.Slice(64, 8)),
-            SeedId: Hex(file.Slice(72, 4)));
+            SeedId: Hex(file.Slice(72, 4)),
+            Nonce: Hex(file.Slice(24, 12)));
     }
 
     private static string Hex(ReadOnlySpan<byte> bytes) => Convert.ToHexStringLower(bytes);

@@ -31,11 +31,11 @@ internal static class SyncApi
         var body = new ByteArrayContent(bytes);
         body.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");
 
-        return device.PostAsync("/api/sync/device/files", body);
+        return device.PostAsync("/api/device/stores/files", body);
     }
 
     public static Task<HttpResponseMessage> HeadsAsync(HttpClient device, params StoreFile[] stores) =>
-        device.PostAsJsonAsync("/api/sync/device/heads", new
+        device.PostAsJsonAsync("/api/device/stores/heads", new
         {
             stores = stores.Select(store => new
             {
@@ -47,7 +47,7 @@ internal static class SyncApi
 
     public static Task<HttpResponseMessage> DownloadAsync(HttpClient device, StoreFile store, uint? above = null) =>
         device.GetAsync(
-            $"/api/sync/device/files/{Convert.ToHexStringLower(store.StoreId)}/{Convert.ToHexStringLower(store.SeedId)}/{store.Kind}"
+            $"/api/device/stores/files/{Convert.ToHexStringLower(store.StoreId)}/{Convert.ToHexStringLower(store.SeedId)}/{store.Kind}"
             + (above is { } held ? $"?above={held}" : string.Empty));
 
     private static async Task<(HttpClient Client, Guid DeviceId)> SignInAsync(

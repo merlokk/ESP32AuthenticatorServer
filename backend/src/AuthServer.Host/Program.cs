@@ -73,6 +73,18 @@ app.MapGet("/api/version", () => TypedResults.Ok(new VersionResponse(ProductVers
     .WithTags("Host")
     .AllowAnonymous();
 
+// A device checks it reaches the server: anonymous, no database, never cached; the time lets it see
+// how far its clock is off. Under /api/device/ so the BFF passes it through like the rest of the
+// device API (device-protocol.md).
+app.MapGet("/api/device/ping", (HttpContext context, TimeProvider clock) =>
+    {
+        context.Response.Headers.CacheControl = "no-store";
+        return TypedResults.Ok(new PingResponse("ok", clock.GetUtcNow().ToUnixTimeSeconds()));
+    })
+    .WithName("Ping")
+    .WithTags("Device")
+    .AllowAnonymous();
+
 // Liveness: the process answers. No checks, so a database outage never restarts the pod.
 app.MapHealthChecks("/health/live", new HealthCheckOptions { Predicate = _ => false })
     .AllowAnonymous()

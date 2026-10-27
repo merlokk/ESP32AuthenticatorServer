@@ -38,3 +38,7 @@ internal static class ProductVersion
 }
 
 internal sealed record VersionResponse(string Version, string? Commit);
+
+/// <param name="Status">Always "ok": an answer at all is the news.</param>
+/// <param name="Time">The server's clock, Unix seconds.</param>
+internal sealed record PingResponse(string Status, long Time);

@@ -25,7 +25,7 @@ public sealed class DeviceSignInTests(IdentityFixture fixture) : IClassFixture<I
         token.Subject.ShouldBe(account.Id.ToString());
         token.GetClaim("device_id").Value.ShouldBe(clientId);
 
-        var device = await (await AccessTokens.Bearer(fixture.Application, accessToken).GetAsync("/api/identity/device")).JsonAsync();
+        var device = await (await AccessTokens.Bearer(fixture.Application, accessToken).GetAsync("/api/device/me")).JsonAsync();
         device["deviceId"]!.GetValue<string>().ShouldBe(clientId);
         device["userId"]!.GetValue<string>().ShouldBe(account.Id.ToString());
         device["serial"]!.GetValue<string>().ShouldBe(account.Device.Serial);
@@ -94,13 +94,13 @@ public sealed class DeviceSignInTests(IdentityFixture fixture) : IClassFixture<I
         var web = await AccessTokens.BearerAsync(fixture.Application, account);
 
         (await AccessTokens.Bearer(fixture.Application, deviceToken).GetAsync("/api/identity/me")).StatusCode.ShouldBe(HttpStatusCode.Forbidden);
-        (await web.GetAsync("/api/identity/device")).StatusCode.ShouldBe(HttpStatusCode.Forbidden);
+        (await web.GetAsync("/api/device/me")).StatusCode.ShouldBe(HttpStatusCode.Forbidden);
     }
 
     [Fact]
     public async Task The_device_endpoint_needs_a_token()
     {
-        (await fixture.Application.CreateClient().GetAsync("/api/identity/device")).StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
+        (await fixture.Application.CreateClient().GetAsync("/api/device/me")).StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
     }
 
     private async Task<(TestAccount Account, string ClientId)> RegisteredAsync(string email)

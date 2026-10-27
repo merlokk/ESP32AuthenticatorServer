@@ -28,7 +28,8 @@ internal sealed class Endpoint(IdentitySettings settings) : EndpointWithoutReque
                 (long)settings.RefreshTokenLifetime.TotalSeconds,
                 (long)settings.InviteWindow.TotalSeconds,
                 (long)settings.DeviceWindow.TotalSeconds,
-                settings.TotpEncryptionKey.Length > 0),
+                settings.TotpEncryptionKey.Length > 0,
+                settings.LatestFirmware),
             cancellationToken);
 }
 
@@ -40,4 +41,5 @@ internal sealed record ConfigurationResponse(
     long RefreshTokenLifetimeSeconds,
     long InviteWindowSeconds,
     long DeviceWindowSeconds,
-    bool TotpEncryptionKeySet);
+    bool TotpEncryptionKeySet,
+    string LatestFirmware);

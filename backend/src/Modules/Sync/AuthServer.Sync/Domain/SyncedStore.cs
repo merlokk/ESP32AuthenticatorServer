@@ -44,6 +44,9 @@ internal sealed class StoreVersion
 
     public string KeyId { get; init; } = string.Empty;
 
+    /// <summary>The GCM nonce (hex): random on every write, so it tells two writes of one counter apart.</summary>
+    public string Nonce { get; init; } = string.Empty;
+
     /// <summary>The device_id of the token that uploaded it (an Identity device; may be gone since).</summary>
     public Guid UploadedByDevice { get; init; }
 

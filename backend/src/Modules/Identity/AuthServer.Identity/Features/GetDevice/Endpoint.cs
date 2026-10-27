@@ -11,7 +11,7 @@ internal sealed class Endpoint(IdentityDbContext context) : EndpointWithoutReque
 {
     public override void Configure()
     {
-        Get("/identity/device");
+        Get("/device/me");
         Policies(IdentityPolicies.Device);
         Options(route => route.WithTags("Identity").WithName("GetDevice"));
         Summary(summary => summary.Summary = "Who the calling device is (device token).");

@@ -27,6 +27,57 @@ public sealed class SyncTests(IdentityFixture fixture) : IClassFixture<IdentityF
         heads[0]!["modified"]!.GetValue<long>().ShouldBe(1_790_000_123);
         heads[1]!["version"].ShouldBeNull();
         heads[1]!["modified"].ShouldBeNull();
+        heads[1]!["nonce"].ShouldBeNull();
+    }
+
+    // UC-39: what a new or restored device may adopt, with when each was last synced.
+    [Fact]
+    public async Task A_device_lists_the_owners_stores_filtered_by_its_seed()
+    {
+        await fixture.ResetAsync();
+        var (device, deviceId) = await SyncApi.DeviceAsync(fixture, await fixture.CreateUserAsync("ada@example.com"));
+        var otherSeed = Vault with { SeedId = Convert.FromHexString("0f0f0f0f") };
+        await SyncApi.UploadAsync(device, Vault with { Version = 4, Modified = 1_790_000_400, KdfIterations = 250_000 });
+        await SyncApi.UploadAsync(device, otherSeed with { Version = 1 });
+
+        var all = (await (await device.GetAsync("/api/device/stores")).JsonAsync())["stores"]!.AsArray();
+        var mine = (await (await device.GetAsync("/api/device/stores?seedId=c1c2c3c4")).JsonAsync())["stores"]!.AsArray();
+
+        all.Count.ShouldBe(2);
+        var store = mine.Single()!;
+        store["storeId"]!.GetValue<string>().ShouldBe("a1a2a3a4a5a6a7a8");
+        store["seedId"]!.GetValue<string>().ShouldBe("c1c2c3c4");
+        store["kind"]!.GetValue<int>().ShouldBe(2);
+        store["version"]!.GetValue<long>().ShouldBe(4);
+        store["modified"]!.GetValue<long>().ShouldBe(1_790_000_400);
+        store["kdfIterations"]!.GetValue<long>().ShouldBe(250_000);
+        store["keyId"]!.GetValue<string>().ShouldBe("0102030405060708");
+        store["length"]!.GetValue<long>().ShouldBe(64);
+        store["uploadedByDeviceId"]!.GetValue<string>().ShouldBe(deviceId.ToString());
+        store["uploadedAt"]!.GetValue<DateTimeOffset>().ShouldBe(DateTimeOffset.UtcNow, TimeSpan.FromMinutes(1));
+        store.AsObject().ContainsKey("id").ShouldBeFalse();
+
+        await (await device.GetAsync("/api/device/stores?seedId=zz")).ShouldBeProblemAsync(HttpStatusCode.BadRequest, "sync.request-invalid");
+        (await (await AccessTokens.BearerAsync(fixture.Application, await fixture.CreateUserAsync("eve@example.com")))
+            .GetAsync("/api/device/stores")).StatusCode.ShouldBe(HttpStatusCode.Forbidden);
+    }
+
+    // Two devices that each wrote version 5 since their last sync hold different copies with one
+    // counter: the nonce (random on every write) tells the device its copy is not the server's.
+    [Fact]
+    public async Task Heads_name_the_nonce_of_the_newest_write()
+    {
+        await fixture.ResetAsync();
+        var (device, _) = await SyncApi.DeviceAsync(fixture, await fixture.CreateUserAsync("ada@example.com"));
+        var written = Vault with { Version = 5, Nonce = Convert.FromHexString("0a0b0c0d0e0f101112131415") };
+        await SyncApi.UploadAsync(device, written);
+
+        var head = (await (await SyncApi.HeadsAsync(device, Vault)).JsonAsync())["stores"]![0]!;
+        var listed = (await (await device.GetAsync("/api/device/stores")).JsonAsync())["stores"]![0]!;
+
+        head["version"]!.GetValue<long>().ShouldBe(5);
+        head["nonce"]!.GetValue<string>().ShouldBe("0a0b0c0d0e0f101112131415");
+        listed["nonce"]!.GetValue<string>().ShouldBe("0a0b0c0d0e0f101112131415");
     }
 
     [Fact]
@@ -185,9 +236,9 @@ public sealed class SyncTests(IdentityFixture fixture) : IClassFixture<IdentityF
         await fixture.ResetAsync();
         var (device, _) = await SyncApi.DeviceAsync(fixture, await fixture.CreateUserAsync("ada@example.com"));
 
-        await (await device.PostAsJsonAsync("/api/sync/device/heads", new { stores = new[] { new { storeId = "xyz", seedId = "c1c2c3c4", kind = 2 } } }))
+        await (await device.PostAsJsonAsync("/api/device/stores/heads", new { stores = new[] { new { storeId = "xyz", seedId = "c1c2c3c4", kind = 2 } } }))
             .ShouldBeProblemAsync(HttpStatusCode.BadRequest, "sync.request-invalid");
-        await (await device.PostAsJsonAsync("/api/sync/device/heads", new { stores = new[] { new { storeId = "a1a2a3a4a5a6a7a8", seedId = "c1c2c3c4", kind = 9 } } }))
+        await (await device.PostAsJsonAsync("/api/device/stores/heads", new { stores = new[] { new { storeId = "a1a2a3a4a5a6a7a8", seedId = "c1c2c3c4", kind = 9 } } }))
             .ShouldBeProblemAsync(HttpStatusCode.BadRequest, "sync.request-invalid");
     }
 

@@ -46,6 +46,7 @@ internal sealed class SyncDbContext(DbContextOptions<SyncDbContext> options) : D
             version.Property(entity => entity.Length).HasColumnName("length");
             version.Property(entity => entity.KdfIterations).HasColumnName("kdf_iterations");
             version.Property(entity => entity.KeyId).HasColumnName("key_id").HasMaxLength(16);
+            version.Property(entity => entity.Nonce).HasColumnName("nonce").HasMaxLength(24).HasDefaultValue(string.Empty);
             version.Property(entity => entity.UploadedByDevice).HasColumnName("uploaded_by_device");
             version.Property(entity => entity.UploadedAt).HasColumnName("uploaded_at");
             version.Property(entity => entity.Content).HasColumnName("content");

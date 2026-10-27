@@ -18,7 +18,7 @@ internal sealed class Endpoint(SyncDbContext context, SyncSettings settings, Tim
 {
     public override void Configure()
     {
-        Post("/sync/device/files");
+        Post("/device/stores/files");
         Policies(IdentityPolicies.Device);
         Options(route => route
             .WithTags("Sync")
@@ -106,6 +106,7 @@ internal sealed class Endpoint(SyncDbContext context, SyncSettings settings, Tim
             Length = header.Length,
             KdfIterations = header.KdfIterations,
             KeyId = header.KeyId,
+            Nonce = header.Nonce,
             UploadedByDevice = Callers.Device(User),
             UploadedAt = now,
             Content = file,

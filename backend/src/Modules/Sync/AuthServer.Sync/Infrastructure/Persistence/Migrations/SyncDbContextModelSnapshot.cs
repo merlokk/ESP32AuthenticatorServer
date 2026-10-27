@@ -57,6 +57,14 @@ namespace AuthServer.Sync.Infrastructure.Persistence.Migrations
                         .HasColumnType("bigint")
                         .HasColumnName("modified");
 
+                    b.Property<string>("Nonce")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(24)
+                        .HasColumnType("character varying(24)")
+                        .HasDefaultValue("")
+                        .HasColumnName("nonce");
+
                     b.Property<Guid>("StoreRef")
                         .HasColumnType("uuid")
                         .HasColumnName("store_ref");

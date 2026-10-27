@@ -31,6 +31,8 @@ internal static class IdentityErrors
 
     public static readonly Error LastAdmin = new("admin.last", "This would leave no active admin.");
 
+    public static readonly Error DeviceStatusInvalid = new("device-status.invalid", "A status report is a JSON object of at most 4 KB with firmware (1 to 32 characters).");
+
     public static readonly Error RegistrationWindowInvalid = new("registration-window.invalid", "A registration window is 1 to 24 hours.");
 
     public static readonly Error PasskeyNameInvalid = new("passkey.name-invalid", "A passkey name is 1 to 64 characters.");

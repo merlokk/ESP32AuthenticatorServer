@@ -13,7 +13,7 @@ internal sealed class Endpoint(SyncDbContext context) : EndpointWithoutRequest
 {
     public override void Configure()
     {
-        Get("/sync/device/files/{storeId}/{seedId}/{kind}");
+        Get("/device/stores/files/{storeId}/{seedId}/{kind}");
         Policies(IdentityPolicies.Device);
         Options(route => route.WithTags("Sync").WithName("DownloadFile").Produces(200, typeof(byte[]), "application/octet-stream"));
         Summary(summary =>

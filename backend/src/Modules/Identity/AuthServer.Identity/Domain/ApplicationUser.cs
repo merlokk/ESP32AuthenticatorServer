@@ -55,4 +55,10 @@ internal sealed class Device
     public DateTimeOffset RegisteredAt { get; set; }
 
     public DateTimeOffset? LastSeenAt { get; set; }
+
+    /// <summary>The firmware version of the last status report (git describe).</summary>
+    public string? Firmware { get; set; }
+
+    /// <summary>The last status report as the device sent it (JSON): Wi-Fi, BLE, battery and the rest.</summary>
+    public string? Status { get; set; }
 }

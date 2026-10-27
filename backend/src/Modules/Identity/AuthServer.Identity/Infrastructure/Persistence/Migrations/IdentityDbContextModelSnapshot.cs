@@ -138,11 +138,10 @@ namespace AuthServer.Identity.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
-                    b.Property<string>("HardwareId")
-                        .IsRequired()
-                        .HasMaxLength(64)
-                        .HasColumnType("character varying(64)")
-                        .HasColumnName("hardware_id");
+                    b.Property<string>("Firmware")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("firmware");
 
                     b.Property<DateTimeOffset?>("LastSeenAt")
                         .HasColumnType("timestamp with time zone")
@@ -167,6 +166,16 @@ namespace AuthServer.Identity.Infrastructure.Persistence.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("registered_at");
 
+                    b.Property<string>("Serial")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("hardware_id");
+
+                    b.Property<string>("Status")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("status");
+
                     b.Property<byte[]>("TotpSecret")
                         .IsRequired()
                         .HasColumnType("bytea")
@@ -179,7 +188,7 @@ namespace AuthServer.Identity.Infrastructure.Persistence.Migrations
                     b.HasKey("Id")
                         .HasName("pk_devices");
 
-                    b.HasIndex("HardwareId")
+                    b.HasIndex("Serial")
                         .IsUnique()
                         .HasDatabaseName("ix_devices_hardware_id");
 
