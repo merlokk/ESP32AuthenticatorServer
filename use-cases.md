@@ -29,7 +29,8 @@ closes it (null).
 - [x] **UC-3 Open or extend a window.** Admin for any user, a user for
   themselves. Length: `InviteWindow` while the user has no device,
   `DeviceWindow` (default 1 h) once they have one. Opening again extends
-  from now. Closing sets it to null.
+  from now. Closing sets it to null. An admin may choose the length instead:
+  `?hours=` 1 to 24 (the UI offers 1 h and 24 h).
 
 ### Devices
 

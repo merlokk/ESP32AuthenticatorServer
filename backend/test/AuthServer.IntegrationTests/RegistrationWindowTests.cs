@@ -67,6 +67,36 @@ public sealed class RegistrationWindowTests(IdentityFixture fixture) : IClassFix
     }
 
     [Fact]
+    public async Task An_admin_chooses_an_hour_or_a_day_whatever_the_devices()
+    {
+        await fixture.ResetAsync();
+        var admin = await AdminAsync();
+        var invited = await fixture.CreateAccountAsync("invited@example.com");
+        var withDevice = await fixture.CreateUserAsync("user@example.com");
+
+        var hour = await (await admin.PutAsync($"/api/identity/users/{invited}/registration-window?hours=1", null)).JsonAsync();
+        var day = await (await admin.PutAsync($"/api/identity/users/{withDevice.Id}/registration-window?hours=24", null)).JsonAsync();
+
+        hour["registrationOpenUntil"]!.GetValue<DateTimeOffset>().ShouldBe(DateTimeOffset.UtcNow.AddHours(1), Tolerance);
+        day["registrationOpenUntil"]!.GetValue<DateTimeOffset>().ShouldBe(DateTimeOffset.UtcNow.AddHours(24), Tolerance);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    [InlineData(25)]
+    public async Task A_window_is_1_to_24_hours(int hours)
+    {
+        await fixture.ResetAsync();
+        var admin = await AdminAsync();
+        var id = await fixture.CreateAccountAsync("invited@example.com");
+
+        await (await admin.PutAsync($"/api/identity/users/{id}/registration-window?hours={hours}", null))
+            .ShouldBeProblemAsync(HttpStatusCode.BadRequest, "registration-window.invalid");
+        (await fixture.FindUserAsync(id))!.RegistrationOpenUntil.ShouldBeNull();
+    }
+
+    [Fact]
     public async Task A_user_with_a_device_opens_an_hour_for_themselves_and_registers_another()
     {
         await fixture.ResetAsync();

@@ -83,6 +83,12 @@ internal static class RegistrationWindow
         now + (hasDevices ? deviceWindow : inviteWindow);
 
     public static bool IsOpen(DateTimeOffset? until, DateTimeOffset now) => until is { } end && now < end;
+
+    public const int MaximumHours = 24;
+
+    /// <summary>A length an admin chose: 1 to 24 whole hours.</summary>
+    public static Result<TimeSpan> HoursOf(int hours) =>
+        hours is >= 1 and <= MaximumHours ? TimeSpan.FromHours(hours) : IdentityErrors.RegistrationWindowInvalid;
 }
 
 internal static class LastAdminRule

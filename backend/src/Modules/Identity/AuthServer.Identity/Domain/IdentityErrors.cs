@@ -31,6 +31,8 @@ internal static class IdentityErrors
 
     public static readonly Error LastAdmin = new("admin.last", "This would leave no active admin.");
 
+    public static readonly Error RegistrationWindowInvalid = new("registration-window.invalid", "A registration window is 1 to 24 hours.");
+
     public static readonly Error PasskeyNameInvalid = new("passkey.name-invalid", "A passkey name is 1 to 64 characters.");
 
     public static readonly Error PasskeyLimitReached = new("passkey.limit-reached", "An account holds at most 10 passkeys.");
