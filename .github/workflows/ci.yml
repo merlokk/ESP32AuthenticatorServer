@@ -63,18 +63,14 @@ jobs:
           - { part: frontend, context: frontend, file: frontend/Dockerfile }
           - { part: migrations, context: backend, file: backend/migrations.Dockerfile }
     steps:
+      # git describe needs the tags and the history back to the last one.
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
 
-      # The product version: <Version> in Directory.Build.props. A release tag must say the same,
-      # or the images would be tagged one version and report another at /api/version.
+      # The product version is git's: 0.5.0-0-gb249c4e on the tag, 0.5.0-3-gabc1234 after it.
       - id: version
-        run: |
-          v=$(sed -n 's:.*<Version>\(.*\)</Version>.*:\1:p' backend/Directory.Build.props)
-          if [[ "$GITHUB_REF" == refs/tags/* && "$GITHUB_REF_NAME" != "$v" ]]; then
-            echo "::error::Tag $GITHUB_REF_NAME does not match <Version>$v</Version>"
-            exit 1
-          fi
-          echo "version=$v" >> "$GITHUB_OUTPUT"
+        run: echo "version=$(git describe --tags --match='*' --long)" >> "$GITHUB_OUTPUT"
 
       - id: meta
         uses: docker/metadata-action@v6

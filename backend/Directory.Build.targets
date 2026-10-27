@@ -1,0 +1,23 @@
+<Project>
+
+  <!-- The product version comes from git, never from a file: git describe (all tags, long form),
+       e.g. 0.5.0-0-gb249c4e on the tag, 0.5.0-3-gabc1234 three commits later. CI and the Docker
+       build pass it as -p:Version; a local build asks git here. Without git or a tag: 0.0.0. -->
+  <Target Name="VersionFromGit"
+          BeforeTargets="GetAssemblyVersion"
+          Condition="'$(MSBuildProjectName)' == 'AuthServer.Host' and '$(Version)' == '0.0.0'">
+    <Exec Command="git describe --tags --match=* --long"
+          WorkingDirectory="$(MSBuildProjectDirectory)"
+          ConsoleToMSBuild="true"
+          IgnoreExitCode="true"
+          StandardOutputImportance="low"
+          StandardErrorImportance="low">
+      <Output TaskParameter="ConsoleOutput" PropertyName="GitDescribe" />
+      <Output TaskParameter="ExitCode" PropertyName="GitDescribeExitCode" />
+    </Exec>
+    <PropertyGroup Condition="'$(GitDescribeExitCode)' == '0' and '$(GitDescribe)' != ''">
+      <Version>$(GitDescribe)</Version>
+    </PropertyGroup>
+  </Target>
+
+</Project>

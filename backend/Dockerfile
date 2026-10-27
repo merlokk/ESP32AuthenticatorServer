@@ -1,5 +1,5 @@
 # The backend image. Build context: backend/.
-#   docker build -t authserver-backend:dev --build-arg VERSION=0.5.0 \
+#   docker build -t authserver-backend:dev --build-arg VERSION=$(git describe --tags --match=* --long) \
 #     --build-arg COMMIT=$(git rev-parse HEAD) backend
 #   docker run --rm -p 8080:8080 -e ConnectionStrings__AuthServer="..." authserver-backend:dev
 
@@ -15,14 +15,15 @@ COPY src/Modules/Identity/AuthServer.Identity.Contracts/AuthServer.Identity.Cont
 RUN dotnet restore src/AuthServer.Host/AuthServer.Host.csproj
 
 COPY src/ src/
-# No .git in the context, so the commit comes in as an argument (GET /api/version shows it).
-ARG VERSION=0.5.0
+# No .git in the context, so version (git describe) and commit come in as arguments
+# (GET /api/version shows them). An empty VERSION leaves 0.0.0: a bare -p:Version= would fail.
+ARG VERSION=
 ARG COMMIT=
 RUN dotnet publish src/AuthServer.Host/AuthServer.Host.csproj \
     --configuration Release \
     --no-restore \
     --output /app \
-    -p:Version=${VERSION} \
+    ${VERSION:+-p:Version=$VERSION} \
     -p:SourceRevisionId=${COMMIT} \
     -p:UseAppHost=false
 

@@ -199,7 +199,7 @@ OpenTelemetry metrics, health checks.
 |---|---|
 | `/api/**` | FastEndpoints, `RoutePrefix = "api"` |
 | `/connect/**`, `/.well-known/**` | OpenIddict protocol endpoints |
-| `GET /api/version` | `{"version":"0.5.0","commit":"<sha>"}`, anonymous; minimal API, not a slice (answers when composition fails). `version`: `<Version>` in `Directory.Build.props` or `-p:Version`; `commit`: from git, or `-p:SourceRevisionId` (Docker `COMMIT`), null without one |
+| `GET /api/version` | `{"version":"0.5.0-0-gb249c4e","commit":"<sha>"}`, anonymous; minimal API, not a slice (answers when composition fails). `version`: `git describe --tags --match=* --long` (CI and Docker pass `-p:Version`, a local build asks git; 0.0.0 without either); `commit`: from git, or `-p:SourceRevisionId` (Docker `COMMIT`), null without one |
 | `/health/live` | process only, no checks |
 | `/health/ready`, `/health` | PostgreSQL check |
 | `/metrics` | Prometheus scrape |
