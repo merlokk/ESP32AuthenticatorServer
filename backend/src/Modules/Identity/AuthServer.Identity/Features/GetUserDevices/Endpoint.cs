@@ -32,7 +32,7 @@ internal sealed class Endpoint(IdentityDbContext context) : EndpointWithoutReque
         var devices = await context.Devices
             .Where(device => device.UserId == id)
             .OrderBy(device => device.RegisteredAt)
-            .Select(device => new UserDevice(device.Id, device.HardwareId, device.Mac, device.RegisteredAt, device.LastSeenAt))
+            .Select(device => new UserDevice(device.Id, device.Serial, device.Mac, device.RegisteredAt, device.LastSeenAt))
             .ToListAsync(cancellationToken);
 
         await Send.OkAsync(new UserDevicesResponse(devices), cancellationToken);
@@ -41,4 +41,4 @@ internal sealed class Endpoint(IdentityDbContext context) : EndpointWithoutReque
 
 internal sealed record UserDevicesResponse(IReadOnlyList<UserDevice> Devices);
 
-internal sealed record UserDevice(Guid Id, string HardwareId, string Mac, DateTimeOffset RegisteredAt, DateTimeOffset? LastSeenAt);
+internal sealed record UserDevice(Guid Id, string Serial, string Mac, DateTimeOffset RegisteredAt, DateTimeOffset? LastSeenAt);

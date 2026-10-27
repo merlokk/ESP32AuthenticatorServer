@@ -54,7 +54,7 @@ public sealed class UserAdministrationTests(IdentityFixture fixture) : IClassFix
         invitedRow["lastSignInAt"].ShouldBeNull();
 
         var devices = (await (await admin.GetAsync($"/api/identity/users/{adminAccount.Id}/devices")).JsonAsync())["devices"]!.AsArray();
-        devices.Single()!["hardwareId"]!.GetValue<string>().ShouldBe(adminAccount.Device.HardwareId);
+        devices.Single()!["serial"]!.GetValue<string>().ShouldBe(adminAccount.Device.Serial);
     }
 
     [Fact]

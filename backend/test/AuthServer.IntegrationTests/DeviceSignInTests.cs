@@ -28,7 +28,7 @@ public sealed class DeviceSignInTests(IdentityFixture fixture) : IClassFixture<I
         var device = await (await AccessTokens.Bearer(fixture.Application, accessToken).GetAsync("/api/identity/device")).JsonAsync();
         device["deviceId"]!.GetValue<string>().ShouldBe(clientId);
         device["userId"]!.GetValue<string>().ShouldBe(account.Id.ToString());
-        device["hardwareId"]!.GetValue<string>().ShouldBe(account.Device.HardwareId);
+        device["serial"]!.GetValue<string>().ShouldBe(account.Device.Serial);
     }
 
     [Fact]
@@ -115,7 +115,7 @@ public sealed class DeviceSignInTests(IdentityFixture fixture) : IClassFixture<I
     // The same hardware with the key it had before a reset.
     private static VirtualDevice ECDsaCopy(VirtualDevice device)
     {
-        var copy = new VirtualDevice(device.HardwareId, device.Mac);
+        var copy = new VirtualDevice(device.Serial, device.Mac);
         copy.Key.ImportParameters(device.Key.ExportParameters(includePrivateParameters: true));
         return copy;
     }

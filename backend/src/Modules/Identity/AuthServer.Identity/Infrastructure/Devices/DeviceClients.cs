@@ -17,7 +17,7 @@ internal sealed class DeviceClients(IOpenIddictApplicationManager applications)
         {
             ClientId = device.Id.ToString(),
             ClientType = ClientTypes.Confidential,
-            DisplayName = $"Device {device.HardwareId}",
+            DisplayName = $"Device {device.Serial}",
             JsonWebKeySet = new JsonWebKeySet { Keys = { KeyOf(device.PublicKey) } },
             Permissions =
             {

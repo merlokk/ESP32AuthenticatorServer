@@ -18,27 +18,27 @@ internal sealed class Endpoint(
     AccountChanges changes,
     DeviceClients clients,
     TotpSecretProtector protector,
-    TimeProvider clock) : Endpoint<RegisterDeviceRequest, RegisterDeviceResponse>
+    TimeProvider clock) : EndpointWithoutRequest
 {
+    // A registration JWS is about 700 characters.
+    private const int MaximumBodyLength = 8 * 1024;
+
+    /// <summary>
+    /// The firmware's fixed address: <c>POST /register</c>, body a bare JWS (<c>application/jwt</c>).
+    /// The ingress sends it to the backend directly. The device reads only the status code: 2xx
+    /// registered, anything else refused. The body holds the TOTP secret: never logged.
+    /// </summary>
     public override void Configure()
     {
-        Post("/identity/devices/register");
+        Post("/register");
+        RoutePrefixOverride(string.Empty);
         AllowAnonymous();
-        Options(route => route.WithTags("Identity").WithName("RegisterDevice"));
-        Summary(summary =>
-        {
-            summary.Summary = "Register a device to the account with this e-mail (called by the device).";
-            summary.Description =
-                "The fields are signed with the device's P-256 key (architecture.md §4.6). Needs an open registration "
-                + "window on the account, except for the very first account, which becomes an admin. A device with "
-                + "the same hardware id on the same account is replaced. Every refusal looks the same.";
-        });
+        Description(builder => builder.ExcludeFromDescription());
     }
 
-    public override async Task HandleAsync(RegisterDeviceRequest request, CancellationToken cancellationToken)
+    public override async Task HandleAsync(CancellationToken cancellationToken)
     {
-        var verified = DeviceRegistration.Verify(
-            request.Email, request.HardwareId, request.Mac, request.TotpSecret, request.PublicKey, request.Signature);
+        var verified = DeviceRegistration.Verify(await ReadTokenAsync(cancellationToken), clock.GetUtcNow());
 
         if (!verified.IsSuccess)
         {
@@ -63,7 +63,7 @@ internal sealed class Endpoint(
             return;
         }
 
-        var device = await context.Devices.SingleOrDefaultAsync(entity => entity.HardwareId == registration.HardwareId, cancellationToken);
+        var device = await context.Devices.SingleOrDefaultAsync(entity => entity.Serial == registration.Serial, cancellationToken);
 
         if (device is not null && device.UserId != user.Id)
         {
@@ -73,7 +73,7 @@ internal sealed class Endpoint(
 
         if (device is null)
         {
-            device = new Device { Id = Guid.CreateVersion7(), UserId = user.Id, HardwareId = registration.HardwareId };
+            device = new Device { Id = Guid.CreateVersion7(), UserId = user.Id, Serial = registration.Serial };
             context.Devices.Add(device);
         }
 
@@ -90,6 +90,16 @@ internal sealed class Endpoint(
         await transaction.CommitAsync(cancellationToken);
 
         await Send.OkAsync(new RegisterDeviceResponse(device.Id, device.Id.ToString()), cancellationToken);
+    }
+
+    // The body as text, or null past the limit.
+    private async Task<string?> ReadTokenAsync(CancellationToken cancellationToken)
+    {
+        var buffer = new char[MaximumBodyLength + 1];
+        using var reader = new StreamReader(HttpContext.Request.Body, System.Text.Encoding.ASCII);
+        var length = await reader.ReadBlockAsync(buffer, cancellationToken);
+
+        return length > MaximumBodyLength ? null : new string(buffer, 0, length);
     }
 
     // No users yet: the first device makes the first admin, no window needed.
@@ -111,13 +121,10 @@ internal sealed class Endpoint(
         IdentityProblem.SendAsync(
             HttpContext,
             error,
-            error == IdentityErrors.RegistrationInvalid ? StatusCodes.Status400BadRequest
+            error == IdentityErrors.RegistrationInvalid || error == IdentityErrors.RegistrationStale ? StatusCodes.Status400BadRequest
             : error == IdentityErrors.DeviceTaken ? StatusCodes.Status409Conflict
             : StatusCodes.Status403Forbidden,
             cancellationToken);
 }
-
-internal sealed record RegisterDeviceRequest(
-    string? Email, string? HardwareId, string? Mac, string? TotpSecret, string? PublicKey, string? Signature);
 
 internal sealed record RegisterDeviceResponse(Guid DeviceId, string ClientId);

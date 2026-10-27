@@ -23,7 +23,7 @@ internal sealed class Endpoint(IdentityDbContext context) : EndpointWithoutReque
 
         var device = await context.Devices
             .Where(entity => entity.Id == id)
-            .Select(entity => new DeviceResponse(entity.Id, entity.UserId, entity.HardwareId))
+            .Select(entity => new DeviceResponse(entity.Id, entity.UserId, entity.Serial))
             .SingleOrDefaultAsync(cancellationToken);
 
         if (device is null)
@@ -36,4 +36,4 @@ internal sealed class Endpoint(IdentityDbContext context) : EndpointWithoutReque
     }
 }
 
-internal sealed record DeviceResponse(Guid DeviceId, Guid UserId, string HardwareId);
+internal sealed record DeviceResponse(Guid DeviceId, Guid UserId, string Serial);

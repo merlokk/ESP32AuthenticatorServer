@@ -40,8 +40,10 @@ internal sealed class IdentityDbContext(DbContextOptions<IdentityDbContext> opti
         modelBuilder.Entity<Device>(device =>
         {
             device.HasKey(entity => entity.Id);
-            device.Property(entity => entity.HardwareId).HasMaxLength(DeviceRegistration.MaximumHardwareIdLength);
-            device.HasIndex(entity => entity.HardwareId).IsUnique();
+            // The column and index keep the first migration's names: renaming them under a running
+            // backend is not expand-then-contract.
+            device.Property(entity => entity.Serial).HasColumnName("hardware_id").HasMaxLength(64);
+            device.HasIndex(entity => entity.Serial).IsUnique().HasDatabaseName("ix_devices_hardware_id");
             device.Property(entity => entity.Mac).HasMaxLength(17);
             device.HasOne<ApplicationUser>().WithMany().HasForeignKey(entity => entity.UserId).OnDelete(DeleteBehavior.Cascade);
         });

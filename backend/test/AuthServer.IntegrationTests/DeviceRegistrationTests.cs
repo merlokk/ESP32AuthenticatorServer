@@ -82,10 +82,7 @@ public sealed class DeviceRegistrationTests(IdentityFixture fixture) : IClassFix
         using var other = new VirtualDevice();
         var client = fixture.Application.CreateClient();
 
-        var badSignature = device.Registration("open@example.com") with
-        {
-            Signature = other.Sign(VirtualDevice.Message("open@example.com", device.HardwareId, device.Mac, device.TotpSecretBase32, device.PublicKey)),
-        };
+        var badSignature = device.Token(device.Claims("open@example.com"), signWith: other.Key);
 
         var refusals = new[]
         {
@@ -114,14 +111,38 @@ public sealed class DeviceRegistrationTests(IdentityFixture fixture) : IClassFix
         await fixture.ResetAsync();
         using var device = new VirtualDevice();
 
-        var response = await DeviceApi.RegisterAsync(
-            fixture.Application.CreateClient(), device.Registration("a@example.com") with { PublicKey = "AAAA" });
+        var claims = device.Claims("a@example.com");
+        claims["pub"] = "AAAA";
+
+        var response = await DeviceApi.RegisterAsync(fixture.Application.CreateClient(), device.Token(claims));
 
         await response.ShouldBeProblemAsync(HttpStatusCode.BadRequest, "device-registration.invalid");
     }
 
     [Fact]
-    public async Task Re_registering_the_same_hardware_replaces_the_key_and_the_secret_and_keeps_the_id()
+    public async Task A_stale_registration_is_a_bad_request()
+    {
+        await fixture.ResetAsync();
+        using var device = new VirtualDevice();
+
+        var response = await DeviceApi.RegisterAsync(
+            fixture.Application.CreateClient(), device.Registration("a@example.com", DateTimeOffset.UtcNow.AddMinutes(-11)));
+
+        await response.ShouldBeProblemAsync(HttpStatusCode.BadRequest, "device-registration.stale");
+    }
+
+    [Fact]
+    public async Task Anything_that_is_not_a_token_is_a_bad_request()
+    {
+        await fixture.ResetAsync();
+
+        var response = await DeviceApi.RegisterAsync(fixture.Application.CreateClient(), "{\"email\":\"a@example.com\"}");
+
+        await response.ShouldBeProblemAsync(HttpStatusCode.BadRequest, "device-registration.invalid");
+    }
+
+    [Fact]
+    public async Task Re_registering_the_same_serial_replaces_the_key_and_the_secret_and_keeps_the_id()
     {
         await fixture.ResetAsync();
         var account = await fixture.CreateUserAsync("owner@example.com");
@@ -149,17 +170,17 @@ public sealed class DeviceRegistrationTests(IdentityFixture fixture) : IClassFix
     }
 
     [Fact]
-    public async Task Hardware_registered_to_another_user_is_refused()
+    public async Task A_serial_registered_to_another_user_is_refused()
     {
         await fixture.ResetAsync();
         var owner = await fixture.CreateUserAsync("owner@example.com");
         await fixture.CreateAccountAsync("thief@example.com", window: TimeSpan.FromHours(1));
-        using var clone = new VirtualDevice(owner.Device.HardwareId);
+        using var clone = new VirtualDevice(owner.Device.Serial);
 
         var response = await DeviceApi.RegisterAsync(fixture.Application.CreateClient(), clone, "thief@example.com");
 
         await response.ShouldBeProblemAsync(HttpStatusCode.Conflict, "device.taken");
-        (await fixture.QueryAsync(context => context.Devices.SingleAsync(device => device.HardwareId == owner.Device.HardwareId)))
+        (await fixture.QueryAsync(context => context.Devices.SingleAsync(device => device.Serial == owner.Device.Serial)))
             .UserId.ShouldBe(owner.Id);
     }
 
@@ -186,7 +207,7 @@ public sealed class DeviceRegistrationTests(IdentityFixture fixture) : IClassFix
         var devices = (await response.JsonAsync())["devices"]!.AsArray();
 
         devices.Count.ShouldBe(1);
-        devices[0]!["hardwareId"]!.GetValue<string>().ShouldBe(account.Device.HardwareId);
+        devices[0]!["serial"]!.GetValue<string>().ShouldBe(account.Device.Serial);
         devices[0]!["mac"]!.GetValue<string>().ShouldBe(account.Device.Mac);
         devices[0]!["registeredAt"].ShouldNotBeNull();
         text.ShouldNotContain(account.Device.TotpSecretBase32);

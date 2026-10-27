@@ -1,28 +1,28 @@
 using System.Buffers.Text;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
 using AuthServer.Identity.Domain;
 using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
 
 namespace AuthServer.Identity.Tests.Devices;
 
-// The firmware's side of the device protocol in software: a P-256 key, a hardware id, a MAC and
-// the TOTP secret it hands the server. The signed message is built here by hand from the spec in
-// architecture.md §4.6, not by the server's code, so a format change breaks a test.
+// The firmware's side of the device protocol in software: a P-256 key, the chip serial, a MAC and
+// the TOTP secret it hands the server. The registration JWS is built here by hand from the
+// firmware's spec (architecture.md §4.6), not by any JWT library, so a format change breaks a test.
 internal sealed class VirtualDevice : IDisposable
 {
-    public const string MessagePrefix = "esp32authenticator-device-registration-v1";
-
-    public VirtualDevice(string? hardwareId = null, string? mac = null)
+    public VirtualDevice(string? serial = null, string? mac = null)
     {
-        HardwareId = hardwareId ?? "X4-" + Convert.ToHexString(RandomNumberGenerator.GetBytes(6));
-        Mac = mac ?? string.Join(':', RandomNumberGenerator.GetBytes(6).Select(part => part.ToString("X2")));
+        Serial = serial ?? Convert.ToHexStringLower(RandomNumberGenerator.GetBytes(16));
+        Mac = mac ?? string.Join(':', RandomNumberGenerator.GetBytes(6).Select(part => part.ToString("x2")));
     }
 
     public ECDsa Key { get; private set; } = ECDsa.Create(ECCurve.NamedCurves.nistP256);
 
-    public string HardwareId { get; }
+    /// <summary>The chip's eFuse id: 32 lower-case hex characters.</summary>
+    public string Serial { get; }
 
     public string Mac { get; }
 
@@ -30,7 +30,7 @@ internal sealed class VirtualDevice : IDisposable
 
     public string TotpSecretBase32 => Base32.Encode(TotpSecret);
 
-    // Uncompressed SEC1 point: 0x04 || X || Y.
+    // Uncompressed SEC1 point: 0x04 || X || Y, base64url without padding (87 characters).
     public string PublicKey
     {
         get
@@ -40,7 +40,7 @@ internal sealed class VirtualDevice : IDisposable
         }
     }
 
-    // A factory reset: a new key and a new TOTP secret, the same hardware.
+    // What the firmware does before every registration attempt: a new key and a new TOTP secret.
     public void Reset()
     {
         Key.Dispose();
@@ -48,20 +48,27 @@ internal sealed class VirtualDevice : IDisposable
         TotpSecret = RandomNumberGenerator.GetBytes(20);
     }
 
-    public static string Message(string email, string hardwareId, string mac, string totpSecret, string publicKey) =>
-        string.Join('\n', MessagePrefix, email, hardwareId, mac, totpSecret, publicKey);
+    public Dictionary<string, object> Claims(string email, DateTimeOffset? issuedAt = null) => new()
+    {
+        ["email"] = email,
+        ["serial"] = Serial,
+        ["mac"] = Mac,
+        ["totp"] = TotpSecretBase32,
+        ["pub"] = PublicKey,
+        ["iat"] = (issuedAt ?? DateTimeOffset.UtcNow).ToUnixTimeSeconds(),
+    };
 
-    // Raw r || s, as micro-ecc produces it.
-    public string Sign(string message) =>
-        Base64Url.EncodeToString(Key.SignData(Encoding.UTF8.GetBytes(message), HashAlgorithmName.SHA256));
+    public string Registration(string email, DateTimeOffset? issuedAt = null) => Token(Claims(email, issuedAt));
 
-    public RegistrationBody Registration(string email) => new(
-        email,
-        HardwareId,
-        Mac,
-        TotpSecretBase32,
-        PublicKey,
-        Sign(Message(email, HardwareId, Mac, TotpSecretBase32, PublicKey)));
+    // Compact JWS: base64url(header).base64url(payload).base64url(r || s), ES256.
+    public string Token(IDictionary<string, object> claims, string algorithm = "ES256", ECDsa? signWith = null)
+    {
+        var header = Encode(JsonSerializer.SerializeToUtf8Bytes(new Dictionary<string, string> { ["alg"] = algorithm, ["typ"] = "JWT" }));
+        var payload = Encode(JsonSerializer.SerializeToUtf8Bytes(claims));
+        var signature = (signWith ?? Key).SignData(Encoding.ASCII.GetBytes($"{header}.{payload}"), HashAlgorithmName.SHA256);
+
+        return $"{header}.{payload}.{Encode(signature)}";
+    }
 
     public string Code(DateTimeOffset at) => Totp.Code(TotpSecret, Totp.StepAt(at));
 
@@ -81,17 +88,10 @@ internal sealed class VirtualDevice : IDisposable
             IssuedAt = now.UtcDateTime,
             NotBefore = now.UtcDateTime,
             Expires = now.AddMinutes(2).UtcDateTime,
-            SigningCredentials = new SigningCredentials(
-                new ECDsaSecurityKey(Key), SecurityAlgorithms.EcdsaSha256),
+            SigningCredentials = new SigningCredentials(new ECDsaSecurityKey(Key), SecurityAlgorithms.EcdsaSha256),
         });
 
     public void Dispose() => Key.Dispose();
 
-    internal sealed record RegistrationBody(
-        string Email,
-        string HardwareId,
-        string Mac,
-        string TotpSecret,
-        string PublicKey,
-        string Signature);
+    private static string Encode(byte[] bytes) => Base64Url.EncodeToString(bytes);
 }

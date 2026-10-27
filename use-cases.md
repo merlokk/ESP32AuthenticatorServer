@@ -32,20 +32,20 @@ closes it (null).
 
 ### Devices
 
-- [x] **UC-4 Device registration.** The device sends e-mail, hardware id,
-  MAC, its TOTP secret for the server and its ECDSA P-256 public key, signed
-  with the matching private key. The server checks the signature, an open
+- [x] **UC-4 Device registration.** `POST /register`, a JWS (ES256) the
+  device signs with its new key: e-mail, serial (chip id), MAC, its TOTP
+  secret for the server, its P-256 public key, `iat` (±10 min). The server checks the signature, an open
   window on the user with that e-mail and that the user is not blocked, then
   stores the device and closes the window. One refusal for every cause (no
   account, no window, expired window, blocked, bad signature).
-- [x] **UC-5 Re-registration.** The same hardware id on the same user
-  replaces the stored device (key, MAC, TOTP secret); the device id stays.
-  A hardware id registered to another user is refused.
+- [x] **UC-5 Re-registration.** The same serial on the same user replaces
+  the stored device (key, MAC, TOTP secret); the device id stays. A serial
+  registered to another user is refused.
 - [x] **UC-6 Device sign-in.** `private_key_jwt` (RFC 7523): the device
   signs a short JWT with its key and exchanges it at `/connect/token`
   (`client_credentials`) for an access token naming the device and its
   owner. Refused for a removed device or a blocked owner.
-- [x] **UC-7 List my devices.** Id, hardware id, MAC, registered and last
+- [x] **UC-7 List my devices.** Id, serial, MAC, registered and last
   seen instants. Never the key or the TOTP secret.
 - [ ] UC-8 Edit and remove devices (user and admin). Later.
 

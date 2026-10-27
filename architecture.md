@@ -210,30 +210,36 @@ A device talks to `https://<server>` (its configured server name) through the
 ingress and the BFF, like a browser. Its private key and the server's TOTP
 secret live in its SPIFFS.
 
-**Registration** `POST /api/identity/devices/register`, anonymous, JSON:
+**Registration** `POST /register` (the firmware's fixed address; the ingress
+routes it to the backend, past the BFF), `Content-Type: application/jwt`, the
+body a bare compact JWS. The device waits 15 s, follows no redirect, reads no
+body: 2xx is registered, any other status is shown as a refusal.
 
-| Field | Value |
+Header `{"alg":"ES256","typ":"JWT"}`; signature ECDSA P-256 / SHA-256 over
+ASCII `base64url(header).base64url(payload)`, raw `r‖s` (64 bytes), by the
+key in its own `pub` claim (proof of possession). Payload:
+
+| Claim | Value |
 |---|---|
-| `email` | the account's address, as typed on the device |
-| `hardwareId` | 1–64 printable ASCII, no spaces; unique on the server |
-| `mac` | `AA:BB:CC:DD:EE:FF` (`-` or no separator also accepted) |
-| `totpSecret` | base32, 10–64 bytes: the secret the device shows codes from (RFC 6238, SHA-1, 30 s, 6 digits) |
-| `publicKey` | base64url of the P-256 point: 65 bytes `04‖X‖Y` or 64 bytes `X‖Y` |
-| `signature` | base64url ECDSA P-256 / SHA-256 over the message below: 64 bytes `r‖s` (or DER) |
+| `email` | typed on the device: ASCII, 3–64, one `@`; unconfirmed |
+| `serial` | the device id: the chip's eFuse id, 32 hex (stored lower case); unique |
+| `mac` | Wi-Fi MAC, `aa:bb:cc:dd:ee:ff` |
+| `totp` | the TOTP secret, base32 (20 bytes: 32 characters): RFC 6238, SHA-1, 30 s, 6 digits |
+| `pub` | P-256 point `04‖X‖Y` (65 bytes), base64url (87 characters) |
+| `iat` | Unix seconds; within ±10 minutes of the server's clock |
 
-Message (UTF-8, `\n` between lines, no trailing newline), the fields exactly
-as sent: `esp32authenticator-device-registration-v1`, `email`, `hardwareId`,
-`mac`, `totpSecret`, `publicKey`.
-
-The signature proves the key; the permission is the account's registration
-window (use-cases.md UC-1 to UC-5): open window, not blocked, else `403
-device-registration.refused` (one answer for every cause); malformed: `400
-device-registration.invalid`; a hardware id on another account: `409
-device.taken`. Success: `{ deviceId, clientId }` and the window closes. The
-same hardware id on the same account replaces key, MAC and TOTP secret; the
-id stays. With no users at all the first registration needs no window and
-makes an admin. The window is the only gate: whoever knows the address
-inside a window can register (a decided trade-off).
+The permission is the account's registration window (use-cases.md UC-1 to
+UC-5): open window, not blocked, else `403 device-registration.refused` (one
+answer for every cause, a bad signature too); malformed or not ES256: `400
+device-registration.invalid`; `iat` off: `400 device-registration.stale`; a
+serial on another account: `409 device.taken`. Success: `200 { deviceId,
+clientId }` and the window closes. The device makes a new key and TOTP secret
+before every attempt, so the same serial on the same account replaces key,
+MAC and secret; the device id stays. With no users at all the first
+registration needs no window and makes an admin. The window is the only gate:
+whoever knows the address inside a window can register (a decided
+trade-off). The body holds the TOTP secret: never logged; the secret is stored
+encrypted.
 
 **Sign-in**: `private_key_jwt` (RFC 7523, as OpenIddict 7 implements
 rfc7523bis). `POST /connect/token`, form: `grant_type=client_credentials`,

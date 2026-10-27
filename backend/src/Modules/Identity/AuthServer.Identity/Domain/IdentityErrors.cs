@@ -10,6 +10,8 @@ internal static class IdentityErrors
 
     public static readonly Error RegistrationInvalid = new("device-registration.invalid", "The registration is malformed.");
 
+    public static readonly Error RegistrationStale = new("device-registration.stale", "The registration's iat is more than 10 minutes off: check the device clock.");
+
     public static readonly Error DeviceTaken = new("device.taken", "This device is registered to another account.");
 
     // One refusal for every cause: no account, wrong or reused code, lockout, blocked.

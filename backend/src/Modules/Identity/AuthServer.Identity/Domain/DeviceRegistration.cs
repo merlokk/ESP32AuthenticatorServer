@@ -1,97 +1,134 @@
 using System.Buffers.Text;
-using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
 using AuthServer.Shared;
 
 namespace AuthServer.Identity.Domain;
 
 /// <summary>
-/// What a device sends to register, verified: the device signs the fields with the private key
-/// whose public half it sends (proof of possession). Whether it may register is the account's
-/// registration window, decided elsewhere. Format: architecture.md §4.6.
+/// The firmware's registration, verified: a compact JWS (ES256, raw r || s) signed with the key
+/// whose public half is its own <c>pub</c> claim, so it proves possession of the key. Whether it
+/// may register is the account's registration window, decided elsewhere. architecture.md §4.6.
 /// </summary>
-internal sealed record DeviceRegistration(string Email, string HardwareId, string Mac, byte[] TotpSecret, byte[] PublicKey)
+internal sealed record DeviceRegistration(string Email, string Serial, string Mac, byte[] TotpSecret, byte[] PublicKey)
 {
-    public const string MessagePrefix = "esp32authenticator-device-registration-v1";
+    /// <summary>How far <c>iat</c> may be from the server's clock, either way.</summary>
+    public static readonly TimeSpan MaximumClockSkew = TimeSpan.FromMinutes(10);
 
-    public const int MaximumHardwareIdLength = 64;
+    public const int SerialLength = 32;
 
     private const int MinimumSecretLength = 10;
 
     private const int MaximumSecretLength = 64;
 
-    /// <summary>The signed bytes: the fields exactly as sent, one per line, after the prefix.</summary>
-    public static byte[] Message(string email, string hardwareId, string mac, string totpSecret, string publicKey) =>
-        Encoding.UTF8.GetBytes(string.Join('\n', MessagePrefix, email, hardwareId, mac, totpSecret, publicKey));
-
-    public static Result<DeviceRegistration> Verify(
-        string? email, string? hardwareId, string? mac, string? totpSecret, string? publicKey, string? signature)
+    public static Result<DeviceRegistration> Verify(string? token, DateTimeOffset now)
     {
-        if (email is null || hardwareId is null || mac is null || totpSecret is null || publicKey is null || signature is null
-            || AccountFields.EmailOf(email) is not { IsSuccess: true } parsedEmail
-            || !IsHardwareId(hardwareId)
-            || MacOf(mac) is not { } normalizedMac
-            || !Base32.TryDecode(totpSecret, out var secret) || secret.Length is < MinimumSecretLength or > MaximumSecretLength
-            || PointOf(publicKey) is not { } point
-            || Decode(signature) is not { } signatureBytes)
+        var parts = (token ?? string.Empty).Trim().Split('.');
+
+        if (parts.Length != 3
+            || Decode(parts[0]) is not { } header
+            || Decode(parts[1]) is not { } payload
+            || Decode(parts[2]) is not { Length: 64 } signature
+            || !IsEs256(header)
+            || ClaimsOf(payload) is not { } claims
+            || KeyOf(claims.PublicKey) is not { } key)
         {
             return IdentityErrors.RegistrationInvalid;
         }
 
-        using var key = KeyOf(point);
-
-        if (key is null)
+        using (key)
         {
-            return IdentityErrors.RegistrationInvalid;
+            var signed = Encoding.ASCII.GetBytes($"{parts[0]}.{parts[1]}");
+
+            if (!key.VerifyData(signed, signature, HashAlgorithmName.SHA256, DSASignatureFormat.IeeeP1363FixedFieldConcatenation))
+            {
+                return IdentityErrors.RegistrationRefused;
+            }
         }
 
-        var message = Message(email, hardwareId, mac, totpSecret, publicKey);
-
-        bool verified;
-
-        if (signatureBytes.Length == 64)
+        // After the signature: an unsigned iat says nothing.
+        if ((now - claims.IssuedAt).Duration() > MaximumClockSkew)
         {
-            verified = key.VerifyData(message, signatureBytes, HashAlgorithmName.SHA256, DSASignatureFormat.IeeeP1363FixedFieldConcatenation);
-        }
-        else if (signatureBytes is [0x30, ..] && signatureBytes.Length is >= 8 and <= 72)
-        {
-            verified = key.VerifyData(message, signatureBytes, HashAlgorithmName.SHA256, DSASignatureFormat.Rfc3279DerSequence);
-        }
-        else
-        {
-            return IdentityErrors.RegistrationInvalid;
+            return IdentityErrors.RegistrationStale;
         }
 
-        return verified
-            ? new DeviceRegistration(parsedEmail.Value, hardwareId, normalizedMac, secret, point)
-            : IdentityErrors.RegistrationRefused;
+        return claims.Registration;
     }
 
-    // Printable ASCII without spaces, so it fits on one line of the message.
-    private static bool IsHardwareId(string value) =>
-        value.Length is > 0 and <= MaximumHardwareIdLength && value.All(character => character is > ' ' and <= '~');
-
-    // AA:BB:CC:DD:EE:FF from colons, hyphens or bare hex.
-    private static string? MacOf(string value)
+    private static bool IsEs256(byte[] header)
     {
-        var hex = value.Replace(":", string.Empty).Replace("-", string.Empty);
+        try
+        {
+            using var document = JsonDocument.Parse(header);
 
-        if (hex.Length != 12 || !hex.All(char.IsAsciiHexDigit) || (value.Length != 12 && value.Length != 17))
+            return document.RootElement.ValueKind == JsonValueKind.Object
+                && document.RootElement.TryGetProperty("alg", out var algorithm)
+                && algorithm.ValueKind == JsonValueKind.String
+                && algorithm.GetString() == "ES256";
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
+    }
+
+    private static Claims? ClaimsOf(byte[] payload)
+    {
+        try
+        {
+            using var document = JsonDocument.Parse(payload);
+            var root = document.RootElement;
+
+            if (root.ValueKind != JsonValueKind.Object
+                || Text(root, "email") is not { } email || !IsEmail(email)
+                || Text(root, "serial") is not { } serial || SerialOf(serial) is not { } normalizedSerial
+                || Text(root, "mac") is not { } mac || MacOf(mac) is not { } normalizedMac
+                || Text(root, "totp") is not { } totp
+                || !Base32.TryDecode(totp, out var secret) || secret.Length is < MinimumSecretLength or > MaximumSecretLength
+                || Text(root, "pub") is not { } pub || PointOf(pub) is not { } point
+                || !root.TryGetProperty("iat", out var iat) || !iat.TryGetInt64(out var issuedAt))
+            {
+                return null;
+            }
+
+            return new Claims(
+                new DeviceRegistration(email, normalizedSerial, normalizedMac, secret, point),
+                point,
+                DateTimeOffset.FromUnixTimeSeconds(issuedAt));
+        }
+        catch (Exception exception) when (exception is JsonException or ArgumentOutOfRangeException)
         {
             return null;
         }
-
-        return string.Join(':', Enumerable.Range(0, 6).Select(index => hex.Substring(index * 2, 2).ToUpper(CultureInfo.InvariantCulture)));
     }
 
-    // 65 bytes 0x04 || X || Y, or 64 bytes X || Y as micro-ecc exports it.
-    private static byte[]? PointOf(string value) => Decode(value) switch
+    private static string? Text(JsonElement root, string name) =>
+        root.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.String ? value.GetString() : null;
+
+    // As the device takes it: ASCII, 3 to 64 characters, one '@'; then a bare address.
+    private static bool IsEmail(string value) =>
+        value.Length is >= 3 and <= 64
+        && value.All(char.IsAscii)
+        && value.Count(character => character == '@') == 1
+        && AccountFields.EmailOf(value).IsSuccess;
+
+    // The chip's eFuse id: 32 hex characters, stored lower case.
+    private static string? SerialOf(string value) =>
+        value.Length == SerialLength && value.All(char.IsAsciiHexDigit) ? value.ToLowerInvariant() : null;
+
+    // aa:bb:cc:dd:ee:ff, stored lower case.
+    private static string? MacOf(string value)
     {
-        [0x04, ..] and { Length: 65 } point => point,
-        { Length: 64 } raw => [0x04, .. raw],
-        _ => null,
-    };
+        var groups = value.Split(':');
+
+        return groups.Length == 6 && groups.All(group => group.Length == 2 && group.All(char.IsAsciiHexDigit))
+            ? value.ToLowerInvariant()
+            : null;
+    }
+
+    // Uncompressed SEC1: 0x04 || X || Y, 65 bytes.
+    private static byte[]? PointOf(string value) => Decode(value) is [0x04, ..] and { Length: 65 } point ? point : null;
 
     private static ECDsa? KeyOf(byte[] point)
     {
@@ -119,11 +156,13 @@ internal sealed record DeviceRegistration(string Email, string HardwareId, strin
     {
         try
         {
-            return Base64Url.DecodeFromChars(value);
+            return value.Length == 0 ? null : Base64Url.DecodeFromChars(value);
         }
         catch (FormatException)
         {
             return null;
         }
     }
+
+    private sealed record Claims(DeviceRegistration Registration, byte[] PublicKey, DateTimeOffset IssuedAt);
 }

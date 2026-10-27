@@ -1,10 +1,9 @@
-using System.Net.Http.Json;
-using System.Text.Json.Nodes;
+using System.Net.Http.Headers;
 using AuthServer.Identity.Tests.Devices;
 
 namespace AuthServer.IntegrationTests;
 
-// The firmware's side: registration and private_key_jwt sign-in.
+// The firmware's side: registration (a bare JWS at /register) and private_key_jwt sign-in.
 internal static class DeviceApi
 {
     // rfc7523bis: the assertion's audience is the issuer, exactly as discovery names it.
@@ -13,11 +12,13 @@ internal static class DeviceApi
     public static Task<HttpResponseMessage> RegisterAsync(HttpClient client, VirtualDevice device, string email) =>
         RegisterAsync(client, device.Registration(email));
 
-    public static Task<HttpResponseMessage> RegisterAsync(HttpClient client, VirtualDevice.RegistrationBody body) =>
-        client.PostAsJsonAsync("/api/identity/devices/register", body);
+    public static Task<HttpResponseMessage> RegisterAsync(HttpClient client, string token)
+    {
+        var body = new StringContent(token);
+        body.Headers.ContentType = new MediaTypeHeaderValue("application/jwt");
 
-    public static async Task<string> ClientIdOf(HttpResponseMessage registered) =>
-        JsonNode.Parse(await registered.Content.ReadAsStringAsync())!["clientId"]!.GetValue<string>();
+        return client.PostAsync("/register", body);
+    }
 
     public static Task<HttpResponseMessage> TokenAsync(
         HttpClient client, VirtualDevice device, string clientId, string audience = Issuer) =>

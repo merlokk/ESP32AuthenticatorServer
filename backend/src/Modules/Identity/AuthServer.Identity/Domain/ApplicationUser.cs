@@ -38,7 +38,8 @@ internal sealed class Device
 
     public Guid UserId { get; set; }
 
-    public string HardwareId { get; set; } = string.Empty;
+    /// <summary>The chip's eFuse id, 32 lower-case hex characters; unique.</summary>
+    public string Serial { get; set; } = string.Empty;
 
     public string Mac { get; set; } = string.Empty;
 
