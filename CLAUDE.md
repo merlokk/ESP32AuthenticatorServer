@@ -23,7 +23,8 @@ the sign-in page. Use cases with done flags:
   the frontend.
 
 Purpose, modules, stack, layout, data, config, security, open questions:
-[architecture.md](architecture.md). Read it before writing code.
+[architecture.md](architecture.md). Read it before writing code. Flow,
+commits, CI, release, deploy: [working-with-code.md](working-with-code.md).
 
 ## Stack
 

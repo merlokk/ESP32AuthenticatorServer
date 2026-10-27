@@ -10,7 +10,7 @@ time) and never serves a version older than the one a device already has.
 
 Status: early. The backend's Identity module is in place (device
 registration, sign-in by device TOTP or passkey, user administration; see
-[use-cases.md](use-cases.md)); the sign-in pages and sync are not built yet.
+[use-cases.md](use-cases.md)) and the sign-in page; sync is not built yet.
 
 ## Parts
 
@@ -52,6 +52,7 @@ CI ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) tests both halves an
 - [architecture.md](architecture.md): purpose, sync rule, modules, data,
   config, security, open questions.
 - [CLAUDE.md](CLAUDE.md): commands and coding rules.
+- [working-with-code.md](working-with-code.md): flow, commits, CI, release, deploy.
 - [frontend/README.md](frontend/README.md): frontend file map.
 
 ## License
