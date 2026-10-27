@@ -437,8 +437,11 @@ Auth.js's and the one at the authorization server.
   goes through `/connect/endsession`; the refresh token is not revoked yet.
   No server actions in sign-in or sign-out: an action's id changes with every
   build, so a page loaded before a rollout would call one that is gone.
-- The app (`src/app/(app)`): sidebar (Dashboard, Devices), page, the user's
-  menu (Gravatar, Profile, Sign out). Devices: the list and the registration
+- The app (`src/app/(app)`): sidebar (Dashboard, Devices; Admin → System for
+  `canAdminister`), page, the user's menu (Gravatar, Profile, Sign out).
+  System shows both parts' versions (configuration later). The frontend's
+  version is git's like the backend's: `VERSION`/`COMMIT` build arguments
+  (CI, Docker), else `git describe` in `next.config.ts`, fixed at build. Devices: the list and the registration
   window (open, extend, close; polled while open, a registration closes it).
   Without a session the layout sends the browser to `/sign-in/start`; an API
   401 (token expired) does the same from the query cache. `/` goes to `/dashboard` when signed in.

@@ -66,6 +66,9 @@ services:
   frontend:
     build:
       context: frontend
+      args:
+        VERSION: ${VERSION:-}
+        COMMIT: ${COMMIT:-}
     image: authserver-frontend:dev
     environment:
       BACKEND_URL: http://backend:8080

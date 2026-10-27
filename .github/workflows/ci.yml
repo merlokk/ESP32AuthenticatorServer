@@ -100,7 +100,7 @@ jobs:
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          # Only the backend Dockerfile declares these; the others ignore them.
+          # The backend and frontend Dockerfiles declare these; the migrations one ignores them.
           build-args: |
             VERSION=${{ steps.version.outputs.version }}
             COMMIT=${{ github.sha }}

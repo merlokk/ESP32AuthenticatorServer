@@ -1,5 +1,5 @@
 # The frontend image: Next.js standalone, its server half is the BFF. Build context: frontend/.
-#   docker build -t authserver-frontend:dev frontend
+#   docker build -t authserver-frontend:dev --build-arg VERSION=$(git describe --tags --match=* --long) --build-arg COMMIT=$(git rev-parse HEAD) frontend
 #   docker run --rm -p 3000:3000 -e BACKEND_URL=http://backend:8080 -e AUTH_SECRET=... authserver-frontend:dev
 
 FROM node:24-bookworm-slim AS deps
@@ -8,6 +8,9 @@ COPY package.json package-lock.json .npmrc ./
 RUN npm ci
 
 FROM node:24-bookworm-slim AS build
+# The product version (git describe) and commit: the context has no .git, so they come as arguments.
+ARG VERSION=
+ARG COMMIT=
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .

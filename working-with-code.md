@@ -84,7 +84,8 @@ connection string; the backend never migrates. TLS ends at the ingress;
 
 After a rollout:
 
-- `GET /api/version` answers the new version and commit;
+- `GET /api/version` answers the new version and commit (Admin → System
+  shows the frontend's too);
 - `/health/ready` is 200;
 - the changed page or call works in a browser (sign in, then the feature).
 
@@ -121,6 +122,9 @@ is why every one is expand-then-contract.
   own error URL instead of throwing when discovery fails.
 - **A route handler is not a page**: reach `/connect/**` by
   `window.location`, not the router or a server-action `redirect()`.
+- **Hydration inside `<Suspense>`**: a part that streams in later hydrates
+  after the sidebar has filled the query cache; render cached data there
+  only after hydration (`ClientOnly`), or it will not match the server.
 - **Server actions and rollouts**: an action's id changes with every build;
   a tab opened before a rollout calls one that is gone ("Failed to find
   Server Action"). Sign-in and sign-out are routes for that reason.
