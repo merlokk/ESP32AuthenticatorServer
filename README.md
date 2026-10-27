@@ -52,6 +52,7 @@ CI ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) tests both halves an
 
 - [architecture.md](architecture.md): purpose, sync rule, modules, data,
   config, security, open questions.
+- [device-protocol.md](device-protocol.md): the API the firmware uses.
 - [CLAUDE.md](CLAUDE.md): commands and coding rules.
 - [working-with-code.md](working-with-code.md): flow, commits, CI, release, deploy.
 - [frontend/README.md](frontend/README.md): frontend file map.

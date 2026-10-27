@@ -115,7 +115,7 @@ is why every one is expand-then-contract.
   before writing Next code.
 - **A device through the BFF**: devices reach `https://<server>` like a
   browser, and `/api/**` drops a caller's `Authorization`. A device endpoint
-  lives under `/api/sync/device/` (its route passes the token through) or is
+  lives under `/api/device/` (its route passes the token through) or is
   routed past the BFF by the ingress (`/register`).
 - **The proxy buffers bodies**: Node's fetch re-reads a body on a 401 and
   failed on a stream (a 502 for an expired token). `forward.test.ts` keeps it.

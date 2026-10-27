@@ -24,7 +24,8 @@ shell with dashboard, devices, stores, profile and admin (users, system). Use ca
   the frontend.
 
 Purpose, modules, stack, layout, data, config, security, open questions:
-[architecture.md](architecture.md). Read it before writing code. Flow,
+[architecture.md](architecture.md). Read it before writing code. What a device
+sends and gets: [device-protocol.md](device-protocol.md). Flow,
 commits, CI, release, deploy: [working-with-code.md](working-with-code.md).
 
 ## Stack

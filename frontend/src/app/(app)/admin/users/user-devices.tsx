@@ -4,6 +4,7 @@ import { errorMessage } from "@/api/errors";
 import { useGetUserDevices } from "@/api/generated/identity/identity";
 import type { UserRow } from "@/api/generated/model";
 import { Skeleton } from "@/components/ui/skeleton";
+import { statusSummary } from "@/lib/device-status";
 
 const dateTimeFormat = new Intl.DateTimeFormat("en", { dateStyle: "medium", timeStyle: "short" });
 
@@ -33,7 +34,9 @@ export function UserDevices({ user }: { user: UserRow }) {
           <th className="py-1 pr-4 font-normal">Serial</th>
           <th className="py-1 pr-4 font-normal">MAC</th>
           <th className="py-1 pr-4 font-normal">Registered</th>
-          <th className="py-1 font-normal">Last seen</th>
+          <th className="py-1 pr-4 font-normal">Last seen</th>
+          <th className="py-1 pr-4 font-normal">Firmware</th>
+          <th className="py-1 font-normal">Status</th>
         </tr>
       </thead>
       <tbody>
@@ -45,6 +48,8 @@ export function UserDevices({ user }: { user: UserRow }) {
             <td className="py-1">
               {device.lastSeenAt ? dateTimeFormat.format(new Date(device.lastSeenAt)) : "—"}
             </td>
+            <td className="py-1 pr-4 font-mono text-xs">{device.firmware ?? "—"}</td>
+            <td className="py-1 text-xs">{statusSummary(device.status)}</td>
           </tr>
         ))}
       </tbody>

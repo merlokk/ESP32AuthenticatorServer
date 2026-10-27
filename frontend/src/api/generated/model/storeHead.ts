@@ -13,4 +13,6 @@ export interface StoreHead {
   version?: number | null;
   /** @nullable */
   modified?: number | null;
+  /** @nullable */
+  nonce?: string | null;
 }

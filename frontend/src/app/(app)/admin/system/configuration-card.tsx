@@ -49,6 +49,9 @@ export function ConfigurationCard() {
             <Row label="New device window" settingKey="Identity:DeviceWindow">
               {formatDuration(data.deviceWindowSeconds)}
             </Row>
+            <Row label="Latest firmware (offered to devices)" settingKey="Identity:LatestFirmware">
+              <span className="font-mono">{data.latestFirmware || "— (none offered)"}</span>
+            </Row>
             <Row label="TOTP encryption key" settingKey="Identity:TotpEncryptionKey">
               {data.totpEncryptionKeySet ? (
                 <Badge variant="secondary">set</Badge>

@@ -16,7 +16,7 @@ npm run api:generate           # OpenAPI -> src/api/generated (needs the backend
 | -------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
 | `src/app/api/[...path]`                                        | `/api/**` → backend, the session's access token attached                             |
 | `src/app/connect/[...path]`, `src/app/.well-known/[...path]`   | OpenIddict's protocol routes, proxied as navigation                                  |
-| `src/app/api/sync/device/[...path]`                            | the device sync API → backend, the device's own token passed through                 |
+| `src/app/api/device/[...path]`                                 | the device API (device-protocol.md) → backend, the device's own token passed through |
 | `src/app/api/identity/sign-in/[...path]`                       | the sign-in calls → backend, cookies both ways, no token                             |
 | `src/app/auth/[...nextauth]`                                   | Auth.js (basePath `/auth`)                                                           |
 | `src/app/api/identity/me/passkeys/[[...path]]`                 | passkey calls → backend, token and cookies                                           |

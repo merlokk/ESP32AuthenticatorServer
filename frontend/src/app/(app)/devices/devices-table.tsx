@@ -3,6 +3,7 @@
 import { errorMessage } from "@/api/errors";
 import { useGetMyDevices } from "@/api/generated/identity/identity";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { statusSummary } from "@/lib/device-status";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
@@ -16,7 +17,10 @@ import {
 const dateTimeFormat = new Intl.DateTimeFormat("en", { dateStyle: "medium", timeStyle: "short" });
 
 export function DevicesTable() {
-  const { data, error, isError, isPending } = useGetMyDevices();
+  // Fresh on every visit and polled: a device's status report or a registration changes the rows.
+  const { data, error, isError, isPending } = useGetMyDevices({
+    query: { staleTime: 0, refetchInterval: 30_000 },
+  });
 
   return (
     <Card>
@@ -40,6 +44,8 @@ export function DevicesTable() {
                 <TableHead>MAC</TableHead>
                 <TableHead>Registered</TableHead>
                 <TableHead>Last seen</TableHead>
+                <TableHead>Firmware</TableHead>
+                <TableHead>Status</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -51,6 +57,8 @@ export function DevicesTable() {
                   <TableCell>
                     {device.lastSeenAt ? dateTimeFormat.format(new Date(device.lastSeenAt)) : "—"}
                   </TableCell>
+                  <TableCell className="font-mono text-xs">{device.firmware ?? "—"}</TableCell>
+                  <TableCell className="text-xs">{statusSummary(device.status)}</TableCell>
                 </TableRow>
               ))}
             </TableBody>

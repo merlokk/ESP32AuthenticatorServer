@@ -187,7 +187,9 @@ export const GetUserDevicesResponse = zod.object({
   "serial": zod.string(),
   "mac": zod.string(),
   "registeredAt": zod.iso.datetime({"offset":true}),
-  "lastSeenAt": zod.iso.datetime({"offset":true}).nullish()
+  "lastSeenAt": zod.iso.datetime({"offset":true}).nullish(),
+  "firmware": zod.string().nullish(),
+  "status": zod.unknown().optional()
 }))
 })
 
@@ -223,7 +225,9 @@ export const GetMyDevicesResponse = zod.object({
   "serial": zod.string(),
   "mac": zod.string(),
   "registeredAt": zod.iso.datetime({"offset":true}),
-  "lastSeenAt": zod.iso.datetime({"offset":true}).nullish()
+  "lastSeenAt": zod.iso.datetime({"offset":true}).nullish(),
+  "firmware": zod.string().nullish(),
+  "status": zod.unknown().optional()
 }))
 })
 
@@ -247,7 +251,8 @@ export const GetConfigurationResponse = zod.object({
   "refreshTokenLifetimeSeconds": zod.int(),
   "inviteWindowSeconds": zod.int(),
   "deviceWindowSeconds": zod.int(),
-  "totpEncryptionKeySet": zod.boolean()
+  "totpEncryptionKeySet": zod.boolean(),
+  "latestFirmware": zod.string()
 })
 
 /**

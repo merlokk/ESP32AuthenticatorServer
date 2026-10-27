@@ -24,6 +24,7 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  DeviceStoresResponse,
   GetHeadsRequest,
   GetHeadsResponse,
   StoreVersionsResponse,
@@ -58,7 +59,7 @@ export const getUploadFileUrl = () => {
 
 
 
-  return `/api/sync/device/files`
+  return `/api/device/stores/files`
 }
 
 /**
@@ -347,11 +348,11 @@ export const getGetHeadsUrl = () => {
 
 
 
-  return `/api/sync/device/heads`
+  return `/api/device/stores/heads`
 }
 
 /**
- * Up to 16 stores. version and modified are null for a store the server does not hold. Higher on the device: POST /api/sync/device/files; higher here: GET /api/sync/device/files/... ?above=<own version>.
+ * Up to 16 stores. version and modified are null for a store the server does not hold. Higher on the device: POST /api/device/stores/files; higher here: GET /api/device/stores/files/... ?above=<own version>.
  * @summary The newest version and time the server holds of each named store (device).
  */
 export const getHeads = async (getHeadsRequest: GetHeadsRequest, options?: Parameters<typeof customFetch>[1]): Promise<GetHeadsResponse> => {
@@ -430,14 +431,115 @@ export const useGetHeads = <TError = void,
       > => {
       return useMutation(getGetHeadsMutationOptions(options), queryClient);
     }
-    export const getDownloadFileUrl = (storeId: string,
+    export const getGetDeviceStoresUrl = () => {
+
+
+
+
+  return `/api/device/stores`
+}
+
+/**
+ * ?seedId= (8 hex) keeps the stores of one seed phrase: the only ones the device can open. Newest sync first.
+ * @summary The owner's stores with their newest copy's header and last sync (device).
+ */
+export const getDeviceStores = async ( options?: Parameters<typeof customFetch>[1]): Promise<DeviceStoresResponse> => {
+
+  return customFetch<DeviceStoresResponse>(getGetDeviceStoresUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetDeviceStoresQueryKey = () => {
+    return [
+    `/api/device/stores`
+    ] as const;
+    }
+
+
+export const getGetDeviceStoresQueryOptions = <TData = Awaited<ReturnType<typeof getDeviceStores>>, TError = void>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getDeviceStores>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetDeviceStoresQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getDeviceStores>>> = ({ signal }) => getDeviceStores({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getDeviceStores>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetDeviceStoresQueryResult = NonNullable<Awaited<ReturnType<typeof getDeviceStores>>>
+export type GetDeviceStoresQueryError = void
+
+
+export function useGetDeviceStores<TData = Awaited<ReturnType<typeof getDeviceStores>>, TError = void>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getDeviceStores>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getDeviceStores>>,
+          TError,
+          Awaited<ReturnType<typeof getDeviceStores>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetDeviceStores<TData = Awaited<ReturnType<typeof getDeviceStores>>, TError = void>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getDeviceStores>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getDeviceStores>>,
+          TError,
+          Awaited<ReturnType<typeof getDeviceStores>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetDeviceStores<TData = Awaited<ReturnType<typeof getDeviceStores>>, TError = void>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getDeviceStores>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary The owner's stores with their newest copy's header and last sync (device).
+ */
+
+export function useGetDeviceStores<TData = Awaited<ReturnType<typeof getDeviceStores>>, TError = void>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getDeviceStores>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetDeviceStoresQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+export const getDownloadFileUrl = (storeId: string,
     seedId: string,
     kind: string,) => {
 
 
 
 
-  return `/api/sync/device/files/${storeId}/${seedId}/${kind}`
+  return `/api/device/stores/files/${storeId}/${seedId}/${kind}`
 }
 
 /**
@@ -465,7 +567,7 @@ export const getDownloadFileQueryKey = (storeId: string,
     seedId: string,
     kind: string,) => {
     return [
-    `/api/sync/device/files/${storeId}/${seedId}/${kind}`
+    `/api/device/stores/files/${storeId}/${seedId}/${kind}`
     ] as const;
     }
 

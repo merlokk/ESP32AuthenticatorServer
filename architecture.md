@@ -2,7 +2,7 @@
 
 Status: backend host, the **Identity** module (device registration, TOTP and
 passkey sign-in, OIDC, user administration, profile) and the **Sync** module
-(the device sync API, history); frontend: BFF proxy, Auth.js, sign-in, the
+(the device sync API, history); device status and ping; frontend: BFF proxy, Auth.js, sign-in, the
 app shell with dashboard, devices, stores, profile and admin (users, system).
 The firmware has no sync client yet. Use cases:
 [use-cases.md](use-cases.md). Sections marked **open** are not decided.
@@ -211,69 +211,30 @@ OpenTelemetry metrics, health checks.
 
 ### 4.6 Device API
 
-A device talks to `https://<server>` (its configured server name) through the
-ingress and the BFF, like a browser. Its private key and the server's TOTP
-secret live in its SPIFFS.
+The wire protocol (every call, field and answer): [device-protocol.md](device-protocol.md).
+Here: how the server does it.
 
-**Registration** `POST /register` (the firmware's fixed address; the ingress
-routes it to the backend, past the BFF), `Content-Type: application/jwt`, the
-body a bare compact JWS. The device waits 15 s, follows no redirect, reads no
-body: 2xx is registered, any other status is shown as a refusal.
-
-Header `{"alg":"ES256","typ":"JWT"}`; signature ECDSA P-256 / SHA-256 over
-ASCII `base64url(header).base64url(payload)`, raw `r‖s` (64 bytes), by the
-key in its own `pub` claim (proof of possession). Payload:
-
-| Claim | Value |
-|---|---|
-| `email` | typed on the device: ASCII, 3–64, one `@`; unconfirmed |
-| `serial` | the device id: the chip's eFuse id, 32 hex (stored lower case); unique |
-| `mac` | Wi-Fi MAC, `aa:bb:cc:dd:ee:ff` |
-| `totp` | the TOTP secret, base32 (20 bytes: 32 characters): RFC 6238, SHA-1, 30 s, 6 digits |
-| `pub` | P-256 point `04‖X‖Y` (65 bytes), base64url (87 characters) |
-| `iat` | Unix seconds; within ±10 minutes of the server's clock |
-
-The permission is the account's registration window (use-cases.md UC-1 to
-UC-5): open window, not blocked, else `403 device-registration.refused` (one
-answer for every cause, a bad signature too); malformed or not ES256: `400
-device-registration.invalid`; `iat` off: `400 device-registration.stale`; a
-serial on another account: `409 device.taken`. Success: `200 { deviceId,
-clientId }` and the window closes. The device makes a new key and TOTP secret
-before every attempt, so the same serial on the same account replaces key,
-MAC and secret; the device id stays. With no users at all the first
-registration needs no window and makes an admin. The window is the only gate:
-whoever knows the address inside a window can register (a decided
-trade-off). The body holds the TOTP secret: never logged; the secret is stored
-encrypted.
-
-**Sign-in**: `private_key_jwt` (RFC 7523, as OpenIddict 7 implements
-rfc7523bis). `POST /connect/token`, form: `grant_type=client_credentials`,
-`client_id=<clientId>`, `client_assertion_type=urn:ietf:params:oauth:client-assertion-type:jwt-bearer`,
-`client_assertion=<JWT>`. The JWT: header `{"alg":"ES256","typ":"client-authentication+jwt"}`;
-claims `iss` = `sub` = clientId, `aud` = the issuer exactly as discovery
-names it (`https://<server>/`), `jti` random, `iat`, `exp` (minutes). The
-access token (minutes, no refresh token) has `sub` = owner, `device_id`.
-`GET /api/identity/device` answers who the device is. Refused for a deleted
-device or a blocked owner. mTLS was rejected: TLS ends at the ingress.
-
-**Sync** (device policy; owner = `sub`, writer = `device_id`), under
-`/api/sync/device/` so the BFF passes the device's own token through (§9). A
-store is (owner, store id, seed id, kind): copies under another seed id are
-another store, since only devices with one seed can open each other's.
-
-| Call | Answer |
-|---|---|
-| `POST heads`, `{stores:[{storeId (16 hex), seedId (8 hex), kind (1 fido, 2 records)}]}`, up to 16 | `{stores:[{…, version, modified}]}`, both null for a store the server lacks |
-| `POST files`, body the store file as is (`application/octet-stream`) | `200 {version, modified}`; `409 sync.not-newer` with the head's `version`, `modified`; `400 sync.file-invalid` / `sync.file-plain`; `413 sync.file-too-large` |
-| `GET files/{storeId}/{seedId}/{kind}?above=<held version>` | `200` the newest file; `204` if not above `above`; `404 sync.store-not-found` |
-
-The device asks heads every so often and decides alone: higher on the device,
-upload; higher on the server, download. One file per upload, one short
-transaction: upsert the store row, lock it (`for update`), compare the
-counter, insert the version, drop those beyond `Sync:VersionsToKeep`. Two
-devices racing with one counter queue on the row: one wins, the other gets
-409. Plain stores (cipher 0) are refused: the server never holds a readable
-one. **Open**: the server certificate pinned on the device.
+- A device talks to `https://<server>` through the ingress and the BFF, like a
+  browser; only `/register` is routed past the BFF. Everything else a device
+  calls is under `/api/device/`, where the BFF passes the device's own token
+  through (§9). Ping is a host minimal API (anonymous, no database).
+- Registration (`POST /register`, a JWS signed with the device's new key) and
+  sign-in (`private_key_jwt` at `/connect/token`, a token of minutes with
+  `sub` = owner and `device_id`) are Identity's. The registration window is the
+  only gate (a decided trade-off). The body holds the TOTP secret: never logged;
+  stored encrypted. mTLS was rejected: TLS ends at the ingress.
+- Status (`POST /api/device/status`) is Identity's: the report is kept as sent
+  (`devices.status`, jsonb, 4 KB at most) with its `firmware` read out, the
+  device marked seen; the answer names `Identity:LatestFirmware` when its
+  x.y.z is above the reported one.
+- Stores (`/api/device/stores...`) are Sync's: a store is (owner, store id,
+  seed id, kind); the counter orders copies. An upload is one short
+  transaction: upsert the store row, lock it (`for update`), compare the
+  counter, insert the version, drop those beyond `Sync:VersionsToKeep`. Two
+  devices racing with one counter queue on the row: one wins, the other gets
+  409. The head's nonce (random on every write) lets a device see two writes
+  of one counter. Plain stores (cipher 0) are refused.
+- **Open**: the server certificate pinned on the device.
 
 ### 4.7 Identity
 
@@ -363,7 +324,8 @@ a secret store in the cluster).
     "RefreshTokenLifetime": "08:00:00",
     "InviteWindow": "1.00:00:00",  // registration window without a device
     "DeviceWindow": "01:00:00",    // ... with one
-    "TotpEncryptionKey": ""        // secret: 32 bytes base64
+    "TotpEncryptionKey": "",       // secret: 32 bytes base64
+    "LatestFirmware": ""           // x.y.z offered to devices reporting an older one; empty: none
   },
   "Sync": {
     "VersionsToKeep": 20,          // copies kept per store
@@ -415,9 +377,9 @@ browser (client components) ──► Next.js server (BFF) ──► backend /ap
   token: its answer is the authorization server's cookie.
   `/api/identity/me/passkeys/**` with the token **and** cookies: a passkey
   ceremony keeps its state in the backend's cookie between its two calls.
-  `/api/sync/device/**` passes the caller's own `Authorization` through (a
-  device's token) and attaches no session token, no cookies: the only route
-  where a caller's token crosses.
+  `/api/device/**` (the device API) passes the caller's own `Authorization`
+  through (a device's token) and attaches no session token, no cookies: the
+  only route where a caller's token crosses.
 - A token, or anything derived from one, never crosses into a client
   component's props.
 

@@ -12,4 +12,7 @@ export interface UserDevice {
   registeredAt: string;
   /** @nullable */
   lastSeenAt?: string | null;
+  /** @nullable */
+  firmware?: string | null;
+  status?: unknown;
 }

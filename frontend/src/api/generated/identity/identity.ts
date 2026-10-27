@@ -1646,7 +1646,7 @@ export const getGetDeviceUrl = () => {
 
 
 
-  return `/api/identity/device`
+  return `/api/device/me`
 }
 
 /**
@@ -1669,7 +1669,7 @@ export const getDevice = async ( options?: Parameters<typeof customFetch>[1]): P
 
 export const getGetDeviceQueryKey = () => {
     return [
-    `/api/identity/device`
+    `/api/device/me`
     ] as const;
     }
 

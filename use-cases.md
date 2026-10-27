@@ -9,8 +9,10 @@ UC-2, 3 `RegistrationWindowTests`; UC-6 `DeviceSignInTests`; UC-9
 `TotpSignInTests` (+ `Identity.Tests/Domain/TotpTests`); UC-10, 12, 13
 `PasskeyTests`; UC-11 `AuthorizationCodeFlowTests`, `RenewalTests`,
 `EphemeralSigningKeyTests`; UC-14 to 19 `UserAdministrationTests`; UC-20, 21
-`ProfileTests`; UC-22 `ConfigurationTests`; UC-30 to 35 `SyncTests` (+
-`Sync.Tests/Domain`).
+`ProfileTests`; UC-22 `ConfigurationTests`; UC-30 to 35, 39 `SyncTests` (+
+`Sync.Tests/Domain`); UC-38 `DeviceStatusTests` (+
+`Identity.Tests/Domain/FirmwareVersionTests`); UC-40
+`Host.Tests/PingEndpointTests`.
 
 ## Identity
 
@@ -97,8 +99,9 @@ closes it (null).
 A store is (owner, store id, seed id, kind). The counter orders copies; the
 modification time is shown, never compared.
 
-- [x] **UC-30 Heads.** A device names up to 16 stores and gets the version
-  and time the server holds of each, null for one it lacks.
+- [x] **UC-30 Heads.** A device names up to 16 stores and gets the version,
+  time and nonce the server holds of each, null for one it lacks (the nonce
+  tells two writes of one counter apart).
 - [x] **UC-31 Upload.** A device's copy is kept only if its version is above
   the newest the server holds, whatever the time; otherwise `409
   sync.not-newer` names the head. Two devices racing with one counter: one
@@ -114,3 +117,17 @@ modification time is shown, never compared.
   and its kept versions; never a file.
 - [ ] UC-36 Restore an old version from the UI. Open.
 - [ ] UC-37 A deleted user's stores go too (cross-module). Open.
+- [x] **UC-39 Stores to adopt.** A device lists the owner's stores (one seed
+  id, or all), newest sync first, each with its newest copy's header and
+  last sync: what a new or restored device chooses from.
+
+## Devices
+
+The wire protocol: [device-protocol.md](device-protocol.md).
+
+- [x] **UC-38 Status.** A device reports its state (firmware required, Wi-Fi,
+  BLE, battery and any other field, 4 KB at most); the report is kept, the
+  device marked seen, and the answer names a newer firmware release
+  (`Identity:LatestFirmware`) or null. The owner and the admin see firmware
+  and status with the device.
+- [x] **UC-40 Ping.** Anonymous: the server answers `ok` and its time.

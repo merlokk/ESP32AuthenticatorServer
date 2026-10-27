@@ -13,4 +13,5 @@ export interface ConfigurationResponse {
   inviteWindowSeconds: number;
   deviceWindowSeconds: number;
   totpEncryptionKeySet: boolean;
+  latestFirmware: string;
 }

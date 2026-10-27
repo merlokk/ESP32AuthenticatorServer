@@ -59,7 +59,7 @@ export const GetStoresResponse = zod.object({
 })
 
 /**
- * Up to 16 stores. version and modified are null for a store the server does not hold. Higher on the device: POST /api/sync/device/files; higher here: GET /api/sync/device/files/... ?above=<own version>.
+ * Up to 16 stores. version and modified are null for a store the server does not hold. Higher on the device: POST /api/device/stores/files; higher here: GET /api/device/stores/files/... ?above=<own version>.
  * @summary The newest version and time the server holds of each named store (device).
  */
 export const GetHeadsBody = zod.object({
@@ -76,7 +76,29 @@ export const GetHeadsResponse = zod.object({
   "seedId": zod.string(),
   "kind": zod.int(),
   "version": zod.int().nullish(),
-  "modified": zod.int().nullish()
+  "modified": zod.int().nullish(),
+  "nonce": zod.string().nullish()
+}))
+})
+
+/**
+ * ?seedId= (8 hex) keeps the stores of one seed phrase: the only ones the device can open. Newest sync first.
+ * @summary The owner's stores with their newest copy's header and last sync (device).
+ */
+export const GetDeviceStoresResponse = zod.object({
+  "stores": zod.array(zod.object({
+  "storeId": zod.string(),
+  "seedId": zod.string(),
+  "kind": zod.int(),
+  "version": zod.int(),
+  "modified": zod.int(),
+  "cipher": zod.int(),
+  "length": zod.int(),
+  "kdfIterations": zod.int(),
+  "keyId": zod.string(),
+  "nonce": zod.string(),
+  "uploadedByDeviceId": zod.string(),
+  "uploadedAt": zod.iso.datetime({"offset":true})
 }))
 })
 
