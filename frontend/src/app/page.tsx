@@ -1,7 +1,9 @@
 import { Suspense } from "react";
 import { connection } from "next/server";
 import { ShieldCheck } from "lucide-react";
+import { auth } from "@/auth";
 import { backendUrl } from "@/lib/backend";
+import { SignInButton, SignOutButton } from "./account-buttons";
 
 export default function Home() {
   return (
@@ -14,10 +16,38 @@ export default function Home() {
         Encrypted sync for your authenticator devices. The server never sees your PIN, your seed
         phrase or your passwords.
       </p>
+      <Suspense>
+        <Account />
+      </Suspense>
       <Suspense fallback={<p className="text-sm text-muted-foreground">Backend: …</p>}>
         <BackendVersion />
       </Suspense>
     </main>
+  );
+}
+
+// Who is signed in, from the session cookie at request time.
+async function Account() {
+  // Auth.js draws random bytes (jose) before it reads the cookie: request time, not prerender.
+  await connection();
+  const session = await auth();
+  if (!session || session.error) {
+    return (
+      <div>
+        <SignInButton />
+      </div>
+    );
+  }
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border px-4 py-3">
+      <p className="text-sm">
+        Signed in as <span className="font-medium">{session.user?.name}</span>
+        {session.user?.email && (
+          <span className="text-muted-foreground"> ({session.user.email})</span>
+        )}
+      </p>
+      <SignOutButton />
+    </div>
   );
 }
 

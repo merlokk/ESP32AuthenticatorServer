@@ -16,7 +16,9 @@ npm run api:generate           # OpenAPI -> src/api/generated (needs the backend
 | ------------------------------------------------------------ | -------------------------------------------------------- |
 | `src/app/api/[...path]`                                      | `/api/**` → backend, the session's access token attached |
 | `src/app/connect/[...path]`, `src/app/.well-known/[...path]` | OpenIddict's protocol routes, proxied as navigation      |
+| `src/app/api/identity/sign-in/[...path]`                     | the sign-in calls → backend, cookies both ways, no token |
 | `src/app/auth/[...nextauth]`                                 | Auth.js (basePath `/auth`)                               |
+| `src/app/sign-in`                                            | the sign-in page (passkey, e-mail + TOTP), its actions   |
 | `src/app/health`                                             | the frontend's own probe                                 |
 | `src/auth.ts`                                                | Auth.js config, `getAccessToken()`                       |
 | `src/lib/backend.ts`                                         | the forwarding proxy (server-only)                       |

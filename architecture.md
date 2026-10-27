@@ -1,8 +1,8 @@
 # Architecture
 
 Status: backend host and the **Identity** module (device registration,
-TOTP and passkey sign-in, OIDC, user administration; backend only, no pages
-yet); frontend skeleton (BFF proxy, Auth.js). Sync is not built. Use cases:
+TOTP and passkey sign-in, OIDC, user administration); frontend: BFF proxy,
+Auth.js, the sign-in page. Sync is not built. Use cases:
 [use-cases.md](use-cases.md). Sections marked **open** are not decided.
 
 ## 1. Purpose
@@ -382,6 +382,8 @@ browser (client components) ──► Next.js server (BFF) ──► backend /ap
 - `/connect/**` and `/.well-known/**` (OpenIddict) are proxied as navigation
   (redirects returned, not followed) so the authorization server is the
   app's origin.
+- `/api/identity/sign-in/**` is forwarded with cookies both ways and no
+  token: its answer is the authorization server's cookie.
 - A token, or anything derived from one, never crosses into a client
   component's props.
 
@@ -421,6 +423,12 @@ not a token of its own. Chosen over a hand-written `openid-client` handler:
 sign-in, callback and sign-out come ready. Sign-out ends both sessions:
 Auth.js's and the one at the authorization server.
 
+- Sign-in: `/connect/authorize` without the backend's cookie sends the
+  browser to `/sign-in?returnUrl=…` (same-origin paths only). The page posts
+  the passkey or the e-mail + code from the browser (the cookie must land
+  there), then navigates on: back to `/connect/authorize`, or a new code flow
+  (server action) for any other return URL. Sign-out clears Auth.js's session
+  and goes through `/connect/endsession`; the refresh token is not revoked yet.
 - `basePath: "/auth"`, not `/api/auth`: `/api/**` is the backend's.
 - A public client: PKCE, no secret; scopes `openid profile offline_access`.
 - The session object (`GET /auth/session`, readable by the browser) carries
