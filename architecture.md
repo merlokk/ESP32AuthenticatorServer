@@ -440,7 +440,8 @@ Auth.js's and the one at the authorization server.
   build, so a page loaded before a rollout would call one that is gone.
 - The app (`src/app/(app)`): sidebar (Dashboard, Devices; Admin → Users,
   System for `canAdminister`), page, the user's menu (Gravatar, Profile, Sign out).
-  Users: the list; edit the user name, change the role, block or unblock,
+  Users: the list (a row opens to its devices); edit the user name, change
+  the role, block or unblock,
   delete (role, block and delete not on one's own row), open the registration window for 1 h or 24 h or close it, invite
   by e-mail (an existing address is said so: `user.email-taken`).
   System shows both parts' versions and the running configuration
