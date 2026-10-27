@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import { connection } from "next/server";
 import { auth } from "@/auth";
+import { ClientOnly } from "@/components/client-only";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AppSidebar } from "./app-sidebar";
@@ -17,21 +18,28 @@ export default function AppLayout({ children }: LayoutProps<"/">) {
         <header className="flex h-14 shrink-0 items-center gap-2 border-b px-4">
           <SidebarTrigger className="-ml-1" />
           <div className="flex-1" />
-          <Suspense fallback={<Skeleton className="size-8 rounded-full" />}>
+          <Suspense fallback={avatarSkeleton}>
             <SessionGate fallback={null}>
-              <UserMenu />
+              <ClientOnly fallback={avatarSkeleton}>
+                <UserMenu />
+              </ClientOnly>
             </SessionGate>
           </Suspense>
         </header>
         <main className="flex flex-1 flex-col gap-6 p-4 md:p-8">
-          <Suspense fallback={<Skeleton className="h-32 w-full max-w-3xl" />}>
-            <SessionGate fallback={<SignInRedirect />}>{children}</SessionGate>
+          <Suspense fallback={pageSkeleton}>
+            <SessionGate fallback={<SignInRedirect />}>
+              <ClientOnly fallback={pageSkeleton}>{children}</ClientOnly>
+            </SessionGate>
           </Suspense>
         </main>
       </SidebarInset>
     </SidebarProvider>
   );
 }
+
+const avatarSkeleton = <Skeleton className="size-8 rounded-full" />;
+const pageSkeleton = <Skeleton className="h-32 w-full max-w-3xl" />;
 
 // No session, or an expired one: the redirect for people. The backend's 401 is the boundary.
 async function SessionGate({
