@@ -113,6 +113,12 @@ is why every one is expand-then-contract.
   `await connection()` before `auth()`, or the prerender trips over the
   random bytes Auth.js draws. Read `frontend/node_modules/next/dist/docs/`
   before writing Next code.
+- **A device through the BFF**: devices reach `https://<server>` like a
+  browser, and `/api/**` drops a caller's `Authorization`. A device endpoint
+  lives under `/api/sync/device/` (its route passes the token through) or is
+  routed past the BFF by the ingress (`/register`).
+- **The proxy buffers bodies**: Node's fetch re-reads a body on a 401 and
+  failed on a stream (a 502 for an expired token). `forward.test.ts` keeps it.
 - **BFF cookies**: `/api/**` drops cookies both ways. A backend call whose
   answer or state is a cookie (sign-in, a passkey ceremony) needs its own
   route with `forwardCookies`. Integration tests do not catch it: the test

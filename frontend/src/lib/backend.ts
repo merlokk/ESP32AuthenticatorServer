@@ -43,6 +43,11 @@ export type ForwardOptions = {
   accessToken?: string;
   /** Cookies cross in both directions (OIDC navigation); /api/** keeps them out. */
   forwardCookies: boolean;
+  /**
+   * The caller's own Authorization passes through: the device API, where a device presents the
+   * token it got with its key. Never with `accessToken`: a session's token is not attached there.
+   */
+  forwardAuthorization?: boolean;
   /** Redirects are returned to the browser, not followed (OIDC navigation). */
   redirect: "manual" | "follow";
 };
@@ -51,12 +56,13 @@ export type ForwardOptions = {
 export function upstreamRequestHeaders(
   incoming: Headers,
   publicUrl: URL,
-  options: Pick<ForwardOptions, "accessToken" | "forwardCookies">,
+  options: Pick<ForwardOptions, "accessToken" | "forwardCookies" | "forwardAuthorization">,
 ): Headers {
   const headers = new Headers();
   incoming.forEach((value, name) => {
     const key = name.toLowerCase();
-    if (HOP_BY_HOP.has(key) || key === "authorization") return;
+    if (HOP_BY_HOP.has(key)) return;
+    if (key === "authorization" && !options.forwardAuthorization) return;
     if (key === "cookie" && !options.forwardCookies) return;
     headers.set(name, value);
   });

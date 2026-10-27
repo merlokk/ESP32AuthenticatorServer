@@ -6,10 +6,10 @@ files (`vault.bin`, `fido.bin`) and gives every device of that user the
 newest copy. **Zero knowledge**: the server never has the PIN, the seed
 phrase or the key; it reads only the plain store header.
 
-Status: backend host and the Identity module (device registration, TOTP and
-passkey sign-in, OIDC, user administration, profile); frontend: BFF proxy,
-Auth.js, sign-in, the app shell with dashboard, devices, profile and admin
-(users, system). Use cases with done flags:
+Status: backend host, the Identity module (device registration, TOTP and
+passkey sign-in, OIDC, user administration, profile) and the Sync module
+(device sync API, history); frontend: BFF proxy, Auth.js, sign-in, the app
+shell with dashboard, devices, stores, profile and admin (users, system). Use cases with done flags:
 [use-cases.md](use-cases.md); tests come first.
 
 ## Overview
@@ -44,6 +44,7 @@ dotnet run --project backend\src\AuthServer.Host     # http://localhost:5080
 #       (also ConnectionStrings:AuthServer, Identity:PublicOrigin http://localhost:3000)
 dotnet ef database update --project backend\src\Modules\Identity\AuthServer.Identity --startup-project backend\src\AuthServer.Host --context IdentityDbContext
 dotnet ef migrations add <Name> --project backend\src\Modules\Identity\AuthServer.Identity --startup-project backend\src\AuthServer.Host --context IdentityDbContext --output-dir Infrastructure/Persistence/Migrations
+# Sync: the same with --project backend\src\Modules\Sync\AuthServer.Sync --context SyncDbContext
 docker build -f backend\migrations.Dockerfile -t authserver-migrations:dev backend
 docker build -t authserver-backend:dev --build-arg VERSION=$(git describe --tags --match=* --long) --build-arg COMMIT=$(git rev-parse HEAD) backend
 # the frontend image takes the same two build arguments (context frontend)

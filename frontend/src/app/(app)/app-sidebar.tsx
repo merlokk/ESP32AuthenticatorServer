@@ -2,7 +2,15 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Cpu, LayoutDashboard, Settings2, ShieldCheck, Users, type LucideIcon } from "lucide-react";
+import {
+  Cpu,
+  Database,
+  LayoutDashboard,
+  Settings2,
+  ShieldCheck,
+  Users,
+  type LucideIcon,
+} from "lucide-react";
 import { useGetProfile } from "@/api/generated/identity/identity";
 import {
   Sidebar,
@@ -23,6 +31,7 @@ type Section = { href: string; label: string; icon: LucideIcon };
 const SECTIONS: Section[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/devices", label: "Devices", icon: Cpu },
+  { href: "/stores", label: "Stores", icon: Database },
 ];
 
 // For administrators (canAdminister from the API, not the role name). A courtesy: the backend's

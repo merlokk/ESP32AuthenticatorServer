@@ -1,9 +1,10 @@
 # Architecture
 
-Status: backend host and the **Identity** module (device registration,
-TOTP and passkey sign-in, OIDC, user administration, profile); frontend: BFF
-proxy, Auth.js, sign-in, the app shell with dashboard, devices, profile and
-admin (users, system). Sync is not built. Use cases:
+Status: backend host, the **Identity** module (device registration, TOTP and
+passkey sign-in, OIDC, user administration, profile) and the **Sync** module
+(the device sync API, history); frontend: BFF proxy, Auth.js, sign-in, the
+app shell with dashboard, devices, stores, profile and admin (users, system).
+The firmware has no sync client yet. Use cases:
 [use-cases.md](use-cases.md). Sections marked **open** are not decided.
 
 ## 1. Purpose
@@ -24,19 +25,21 @@ store header (firmware `store_header.h`) and nothing else:
 | magic `ESAF`, format, kind, cipher | refuse a file that is not a store (format 3, cipher 1) |
 | **store id** (8 bytes) | which store this is: copies on synced devices share it |
 | **seed id** (4 bytes) | which seed phrase: devices of one store share it |
-| **version** (counter) | ordering, rollback refusal |
-| **modification time** (UTC, 0 unknown) | the sync rule |
-| key id, salt, nonce, payload length | stored as is, never interpreted |
+| **version** (counter) | the order: upload accepted only above the head, rollback refusal |
+| **modification time** (UTC, 0 unknown) | shown, never compared (device clocks drift) |
+| key id, KDF iterations, payload length | shown (a key id change: a PIN or seed change) |
+| salt, nonce | stored as is, never interpreted |
 
 The header is the GCM associated data: the server cannot check it, the device
 does on download. A forged header gets a file refused by the device, never
 opened.
 
-**Sync rule** (the firmware's `Newer()`, x4-design.md "Store file and sync"):
-the later modification time wins, also when both copies changed; equal times:
-the higher version; time 0 loses to any known time. The device writes the
-result with version = max(both) + 1. The server applies the same rule and
-never returns a copy below the version a device reports (rollback).
+**Sync rule**: the **counter** orders copies, not the time (clocks drift). The
+server keeps an upload only if its version is above the newest it holds, and
+never serves a copy at or below the version a device reports (rollback). A
+device that wants its copy to win writes it with version = max(both) + 1.
+The firmware's `Newer()` (x4-design.md "Store file and sync") still puts the
+time first: it is to follow this rule.
 
 ## 2. Shape
 
@@ -145,7 +148,8 @@ backend/
 
 One implementation project per module (folders, not an
 Api/Application/Domain/Infrastructure split). Today: `Host`, `Shared`,
-Identity, and the test projects except `Sync.Tests`. `backend/migrations.Dockerfile`
+Identity, Sync (no Contracts yet: nothing calls it), and the test projects.
+`backend/migrations.Dockerfile`
 + `backend/apply-migrations.sh` are the migrations image (§6).
 
 **Image** (`backend/Dockerfile`): `sdk:10.0` restores from the project files
@@ -252,10 +256,24 @@ access token (minutes, no refresh token) has `sub` = owner, `device_id`.
 `GET /api/identity/device` answers who the device is. Refused for a deleted
 device or a blocked owner. mTLS was rejected: TLS ends at the ingress.
 
-**Open**, for Sync: endpoints (server header of a store, upload with the
-base version, download the newest, report the held version), a stale base
-refused, `bytea` up to ~130 KB, how many versions to keep (a TickerQ prune
-job), the server certificate pinned on the device.
+**Sync** (device policy; owner = `sub`, writer = `device_id`), under
+`/api/sync/device/` so the BFF passes the device's own token through (§9). A
+store is (owner, store id, seed id, kind): copies under another seed id are
+another store, since only devices with one seed can open each other's.
+
+| Call | Answer |
+|---|---|
+| `POST heads`, `{stores:[{storeId (16 hex), seedId (8 hex), kind (1 fido, 2 records)}]}`, up to 16 | `{stores:[{…, version, modified}]}`, both null for a store the server lacks |
+| `POST files`, body the store file as is (`application/octet-stream`) | `200 {version, modified}`; `409 sync.not-newer` with the head's `version`, `modified`; `400 sync.file-invalid` / `sync.file-plain`; `413 sync.file-too-large` |
+| `GET files/{storeId}/{seedId}/{kind}?above=<held version>` | `200` the newest file; `204` if not above `above`; `404 sync.store-not-found` |
+
+The device asks heads every so often and decides alone: higher on the device,
+upload; higher on the server, download. One file per upload, one short
+transaction: upsert the store row, lock it (`for update`), compare the
+counter, insert the version, drop those beyond `Sync:VersionsToKeep`. Two
+devices racing with one counter queue on the row: one wins, the other gets
+409. Plain stores (cipher 0) are refused: the server never holds a readable
+one. **Open**: the server certificate pinned on the device.
 
 ### 4.7 Identity
 
@@ -305,6 +323,10 @@ database
 
 - Each `DbContext` sets `HasDefaultSchema` and keeps its own
   `__EFMigrationsHistory` in its schema.
+- `sync.stores`: a row per store (owner, store id, seed id, kind; unique),
+  `head_version` the newest kept. `sync.store_versions`: the header fields,
+  the writer `device_id`, upload time and the whole file (`bytea`), unique
+  (store, version), the last `Sync:VersionsToKeep` per store.
 - EF Core and the Npgsql provider upgrade together (same major). No direct
   `Npgsql` reference without a reason.
 - `dotnet ef` always names `--context` and `--project`; the startup project
@@ -343,7 +365,10 @@ a secret store in the cluster).
     "DeviceWindow": "01:00:00",    // ... with one
     "TotpEncryptionKey": ""        // secret: 32 bytes base64
   },
-  "Sync": {}
+  "Sync": {
+    "VersionsToKeep": 20,          // copies kept per store
+    "MaxFileBytes": 262144         // the largest store file accepted
+  }
 }
 ```
 
@@ -381,7 +406,8 @@ browser (client components) ──► Next.js server (BFF) ──► backend /ap
 
 - `/api/**` is forwarded as one catch-all, the access token attached, paths
   and bodies untouched: the generated client calls relative paths on the
-  app's own origin.
+  app's own origin. The body is buffered (a Blob), not streamed: Node's
+  fetch re-reads it on a 401 and failed on a stream, so a 401 came back 502.
 - `/connect/**` and `/.well-known/**` (OpenIddict) are proxied as navigation
   (redirects returned, not followed) so the authorization server is the
   app's origin.
@@ -389,6 +415,9 @@ browser (client components) ──► Next.js server (BFF) ──► backend /ap
   token: its answer is the authorization server's cookie.
   `/api/identity/me/passkeys/**` with the token **and** cookies: a passkey
   ceremony keeps its state in the backend's cookie between its two calls.
+  `/api/sync/device/**` passes the caller's own `Authorization` through (a
+  device's token) and attaches no session token, no cookies: the only route
+  where a caller's token crosses.
 - A token, or anything derived from one, never crosses into a client
   component's props.
 
@@ -438,7 +467,7 @@ Auth.js's and the one at the authorization server.
   goes through `/connect/endsession`; the refresh token is not revoked yet.
   No server actions in sign-in or sign-out: an action's id changes with every
   build, so a page loaded before a rollout would call one that is gone.
-- The app (`src/app/(app)`): sidebar (Dashboard, Devices; Admin → Users,
+- The app (`src/app/(app)`): sidebar (Dashboard, Devices, Stores; Admin → Users,
   System for `canAdminister`), page, the user's menu (Gravatar, Profile, Sign out).
   Users: the list (a row opens to its devices); edit the user name, change
   the role, block or unblock,
@@ -450,6 +479,9 @@ Auth.js's and the one at the authorization server.
   `COMMIT` build arguments (CI, Docker), else `git describe` in
   `next.config.ts`, fixed at build. Devices: the list and the registration
   window (open, extend, close; polled while open, a registration closes it).
+  Stores: each synced store's header (version, device-clock time, writer,
+  cipher, size, PBKDF2 iterations, key id) and its kept versions, a key id
+  unlike the newest marked (a PIN or seed change).
   Without a session the layout sends the browser to `/sign-in/start`; an API
   401 (token expired) does the same from the query cache. `/` goes to `/dashboard` when signed in.
 - `basePath: "/auth"`, not `/api/auth`: `/api/**` is the backend's.
@@ -464,9 +496,10 @@ Auth.js's and the one at the authorization server.
 
 ## 10. Open questions
 
-- Sync's device API (§4.6).
 - Persisting the signing key (more than one replica).
-- How many store versions to keep, and whether the UI may restore an old one.
+- Whether the UI may restore an old store version.
+- Deleting a user leaves their sync rows: a cross-module side effect (an
+  outbox drained by a job, §3 rule 5).
 - Audit module.
 - Access token refresh in the BFF (§9).
 - Hosting: Kubernetes or a single host with Docker Compose.

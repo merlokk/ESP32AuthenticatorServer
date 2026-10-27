@@ -55,6 +55,15 @@ describe("upstreamRequestHeaders", () => {
     expect(headers.has("authorization")).toBe(false);
   });
 
+  it("passes a device's own token through on the device API, and nothing of a session", () => {
+    const headers = upstreamRequestHeaders(incoming, pageUrl, {
+      forwardCookies: false,
+      forwardAuthorization: true,
+    });
+    expect(headers.get("authorization")).toBe("Bearer forged-by-the-browser");
+    expect(headers.has("cookie")).toBe(false);
+  });
+
   it("keeps cookies out of /api/** and in for OIDC navigation", () => {
     expect(upstreamRequestHeaders(incoming, pageUrl, { forwardCookies: false }).has("cookie")).toBe(
       false,

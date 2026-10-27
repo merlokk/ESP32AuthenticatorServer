@@ -9,7 +9,8 @@ UC-2, 3 `RegistrationWindowTests`; UC-6 `DeviceSignInTests`; UC-9
 `TotpSignInTests` (+ `Identity.Tests/Domain/TotpTests`); UC-10, 12, 13
 `PasskeyTests`; UC-11 `AuthorizationCodeFlowTests`, `RenewalTests`,
 `EphemeralSigningKeyTests`; UC-14 to 19 `UserAdministrationTests`; UC-20, 21
-`ProfileTests`; UC-22 `ConfigurationTests`.
+`ProfileTests`; UC-22 `ConfigurationTests`; UC-30 to 35 `SyncTests` (+
+`Sync.Tests/Domain`).
 
 ## Identity
 
@@ -90,3 +91,26 @@ closes it (null).
 - [x] **UC-22 Read the configuration** the server runs with (the `Identity`
   section; durations in seconds, a secret only as set or not). Read-only: it
   comes from appsettings and the environment.
+
+## Sync
+
+A store is (owner, store id, seed id, kind). The counter orders copies; the
+modification time is shown, never compared.
+
+- [x] **UC-30 Heads.** A device names up to 16 stores and gets the version
+  and time the server holds of each, null for one it lacks.
+- [x] **UC-31 Upload.** A device's copy is kept only if its version is above
+  the newest the server holds, whatever the time; otherwise `409
+  sync.not-newer` names the head. Two devices racing with one counter: one
+  wins. A file that is not a store, a plain one or one too large is refused.
+- [x] **UC-32 Download.** Another device of the owner gets the newest copy
+  above the version it reports, else 204; never another user's.
+- [x] **UC-33 History.** The server keeps the last `Sync:VersionsToKeep`
+  (20) copies of a store and drops older ones on upload.
+- [x] **UC-34 Seed groups.** The same store id under another seed id is
+  another store.
+- [x] **UC-35 Stores in the UI.** The owner sees each store's newest header
+  (version, time, writer device, cipher, size, PBKDF2 iterations, key id)
+  and its kept versions; never a file.
+- [ ] UC-36 Restore an old version from the UI. Open.
+- [ ] UC-37 A deleted user's stores go too (cross-module). Open.

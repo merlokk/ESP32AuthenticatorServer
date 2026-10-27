@@ -8,9 +8,10 @@ hardware authenticator. It keeps each user's encrypted store files
 It reads only the plain store header (store id, seed id, version, modification
 time) and never serves a version older than the one a device already has.
 
-Status: early. The backend's Identity module is in place (device
-registration, sign-in by device TOTP or passkey, user administration; see
-[use-cases.md](use-cases.md)) and the sign-in page; sync is not built yet.
+Status: early. Device registration, sign-in by device TOTP or passkey, user
+administration, and the server side of sync (the device API and the stores
+in the web UI; see [use-cases.md](use-cases.md)). The firmware's sync client
+is not written yet.
 
 ## Parts
 
