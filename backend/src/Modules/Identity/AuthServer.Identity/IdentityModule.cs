@@ -124,6 +124,7 @@ public static class IdentityModule
                 options
                     .SetAuthorizationEndpointUris("connect/authorize")
                     .SetTokenEndpointUris("connect/token")
+                    .SetUserInfoEndpointUris("connect/userinfo")
                     .SetEndSessionEndpointUris("connect/endsession")
                     .SetRevocationEndpointUris("connect/revocation");
 
@@ -166,6 +167,7 @@ public static class IdentityModule
                 options.UseAspNetCore()
                     .EnableAuthorizationEndpointPassthrough()
                     .EnableTokenEndpointPassthrough()
+                    .EnableUserInfoEndpointPassthrough()
                     .EnableEndSessionEndpointPassthrough()
                     // TLS ends at the ingress; the backend speaks http inside the cluster.
                     .DisableTransportSecurityRequirement();

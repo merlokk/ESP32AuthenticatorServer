@@ -8,7 +8,8 @@ Tests (`backend/test/AuthServer.IntegrationTests/` unless noted): UC-1, 4, 5, 7
 UC-2, 3 `RegistrationWindowTests`; UC-6 `DeviceSignInTests`; UC-9
 `TotpSignInTests` (+ `Identity.Tests/Domain/TotpTests`); UC-10, 12, 13
 `PasskeyTests`; UC-11 `AuthorizationCodeFlowTests`, `RenewalTests`,
-`EphemeralSigningKeyTests`; UC-14 to 19 `UserAdministrationTests`.
+`EphemeralSigningKeyTests`; UC-14 to 19 `UserAdministrationTests`; UC-20, 21
+`ProfileTests`.
 
 ## Identity
 
@@ -57,14 +58,20 @@ closes it (null).
 - [x] **UC-10 Passkey.** WebAuthn assertion with a discoverable credential;
   blocked users are refused.
 - [x] **UC-11 OIDC.** Authorization code + PKCE for the BFF client, refresh
-  (not rolling), revocation, end session. The access token carries `sub`,
-  `name`, `email`, `role`; the signing key is per process.
+  (not rolling), revocation, end session, userinfo. The access token carries
+  `sub`, `name`, `email`, `role`; the signing key is per process.
 
 ### Passkeys
 
 - [x] **UC-12 Add a passkey** (signed-in user; up to 10).
 - [x] **UC-13 List and remove my passkeys.** A removed passkey no longer
   signs in.
+- [x] **UC-21 Rename my passkey** (1 to 64 characters).
+
+### Profile
+
+- [x] **UC-20 Change my user name.** Unique; the e-mail stays (admin only,
+  UC-15). Tokens show it from the next renewal.
 
 ### Administration (admin only)
 

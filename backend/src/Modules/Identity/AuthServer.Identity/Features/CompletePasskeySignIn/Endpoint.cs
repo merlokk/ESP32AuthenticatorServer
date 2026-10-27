@@ -31,7 +31,17 @@ internal sealed class Endpoint(
     public override async Task HandleAsync(CompletePasskeySignInRequest request, CancellationToken cancellationToken)
     {
         var credentialJson = request.CredentialJson ?? string.Empty;
-        var result = await signIn.PasskeySignInAsync(credentialJson);
+        SignInResult result;
+
+        try
+        {
+            result = await signIn.PasskeySignInAsync(credentialJson);
+        }
+        catch (InvalidOperationException)
+        {
+            // No ceremony underway: its state cookie did not come back with this request.
+            result = SignInResult.Failed;
+        }
 
         if (!result.Succeeded)
         {

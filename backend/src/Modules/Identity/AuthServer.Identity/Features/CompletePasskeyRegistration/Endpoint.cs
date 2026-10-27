@@ -59,7 +59,18 @@ internal sealed class Endpoint(
             return;
         }
 
-        var attestation = await signIn.PerformPasskeyAttestationAsync(request.CredentialJson ?? string.Empty);
+        PasskeyAttestationResult attestation;
+
+        try
+        {
+            attestation = await signIn.PerformPasskeyAttestationAsync(request.CredentialJson ?? string.Empty);
+        }
+        catch (InvalidOperationException)
+        {
+            // No ceremony underway: its state cookie did not come back with this request.
+            await RefuseAsync(IdentityErrors.PasskeyRegistrationFailed, cancellationToken);
+            return;
+        }
 
         if (!attestation.Succeeded || attestation.Passkey is null)
         {

@@ -151,4 +151,47 @@ public sealed class PasskeyTests(IdentityFixture fixture) : IClassFixture<Identi
         await response.ShouldBeProblemAsync(HttpStatusCode.BadRequest, "passkey.registration-failed");
         (await PasskeyCeremony.ListAsync(client)).ShouldBeEmpty();
     }
+
+    // The ceremony's state is a cookie: a client that did not keep it (a proxy dropping cookies)
+    // gets the ordinary refusal, not a 500.
+    [Fact]
+    public async Task Completing_a_registration_that_never_began_is_refused()
+    {
+        await fixture.ResetAsync();
+        var account = await fixture.CreateUserAsync("user@example.com");
+        var (accessToken, _) = await AccessTokens.ObtainAsync(fixture.CreateBrowser(), account);
+        var withState = AccessTokens.Bearer(fixture.Application, accessToken);
+        using var authenticator = new VirtualAuthenticator();
+        var options = await withState.PostAsJsonAsync("/api/identity/me/passkeys/options", new { name = "key" });
+        var creation = (await options.Content.ReadFromJsonAsync<PasskeyCeremony.CreationOptionsBody>())!;
+
+        var withoutState = fixture.Application.CreateDefaultClient();
+        withoutState.DefaultRequestHeaders.Authorization = new("Bearer", accessToken);
+        var response = await withoutState.PostAsJsonAsync("/api/identity/me/passkeys", new
+        {
+            credentialJson = authenticator.Register(creation.CreationOptions, TestHost.PublicOrigin),
+            name = "key",
+        });
+
+        await response.ShouldBeProblemAsync(HttpStatusCode.BadRequest, "passkey.registration-failed");
+    }
+
+    [Fact]
+    public async Task Completing_a_sign_in_that_never_began_is_refused()
+    {
+        await fixture.ResetAsync();
+        var account = await fixture.CreateUserAsync("user@example.com");
+        var client = await AccessTokens.BearerAsync(fixture.Application, account);
+        using var authenticator = new VirtualAuthenticator();
+        await PasskeyCeremony.RegisterAsync(client, authenticator);
+        var options = await fixture.CreateBrowser().PostAsync("/api/identity/sign-in/passkey/options", content: null);
+        var request = (await options.Content.ReadFromJsonAsync<PasskeyCeremony.RequestOptionsBody>())!;
+
+        var response = await fixture.Application.CreateDefaultClient().PostAsJsonAsync("/api/identity/sign-in/passkey", new
+        {
+            credentialJson = authenticator.Assert(request.RequestOptions, TestHost.PublicOrigin),
+        });
+
+        await response.ShouldBeProblemAsync(HttpStatusCode.Unauthorized, "sign-in.refused");
+    }
 }

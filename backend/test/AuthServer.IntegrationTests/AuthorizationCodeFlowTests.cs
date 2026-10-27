@@ -25,7 +25,8 @@ public sealed class AuthorizationCodeFlowTests(IdentityFixture fixture) : IClass
             .Select(value => value!.GetValue<string>())
             .ShouldContain("ES256");
 
-        foreach (var endpoint in new[] { "authorization_endpoint", "token_endpoint", "end_session_endpoint", "revocation_endpoint" })
+        // Auth.js refuses a provider whose discovery has no userinfo endpoint, even unused.
+        foreach (var endpoint in new[] { "authorization_endpoint", "token_endpoint", "userinfo_endpoint", "end_session_endpoint", "revocation_endpoint" })
         {
             document[endpoint]!.GetValue<string>().ShouldStartWith(TestHost.PublicOrigin);
         }
@@ -89,6 +90,27 @@ public sealed class AuthorizationCodeFlowTests(IdentityFixture fixture) : IClass
         validated.GetClaim("name").Value.ShouldNotBeNullOrWhiteSpace();
         validated.Claims.Where(claim => claim.Type == "role").Select(claim => claim.Value).ShouldBe([UserRoles.Admin]);
         validated.Claims.ShouldNotContain(claim => claim.Type == "device_id");
+    }
+
+    [Fact]
+    public async Task Userinfo_answers_the_users_facts_for_an_access_token()
+    {
+        await fixture.ResetAsync();
+        var account = await fixture.CreateUserAsync("operator@example.com", UserRoles.Admin);
+        var (accessToken, _) = await AccessTokens.ObtainAsync(fixture.CreateBrowser(), account);
+
+        var userinfo = await (await AccessTokens.Bearer(fixture.Application, accessToken).GetAsync("/connect/userinfo")).JsonAsync();
+
+        userinfo["sub"]!.GetValue<string>().ShouldBe(account.Id.ToString());
+        userinfo["name"]!.GetValue<string>().ShouldBe((await fixture.FindUserAsync(account.Id))!.UserName);
+    }
+
+    [Fact]
+    public async Task Userinfo_without_a_token_is_refused()
+    {
+        var response = await fixture.Application.CreateClient().GetAsync("/connect/userinfo");
+
+        response.StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
     }
 
     [Fact]
