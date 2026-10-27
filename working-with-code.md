@@ -125,6 +125,9 @@ is why every one is expand-then-contract.
 - **Hydration inside `<Suspense>`**: a part that streams in later hydrates
   after the sidebar has filled the query cache; render cached data there
   only after hydration (`ClientOnly`), or it will not match the server.
+- **Hidden pages stay in the DOM**: Next 16 keeps recent pages mounted but
+  hidden (`<Activity>`); a test locates visible elements only (role
+  queries, `:visible`), or it finds the page before.
 - **Server actions and rollouts**: an action's id changes with every build;
   a tab opened before a rollout calls one that is gone ("Failed to find
   Server Action"). Sign-in and sign-out are routes for that reason.

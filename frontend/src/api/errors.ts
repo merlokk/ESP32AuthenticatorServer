@@ -18,3 +18,11 @@ export function errorMessage(error: unknown, fallback: string): string {
   }
   return (error instanceof ApiError && error.problem?.title) || fallback;
 }
+
+const PROBLEM_TYPE = "urn:authserver:problem:";
+
+/** The Problem Details code ("user.email-taken"): public API, the thing to branch on. */
+export function problemCode(error: unknown): string | undefined {
+  const type = error instanceof ApiError ? error.problem?.type : undefined;
+  return type?.startsWith(PROBLEM_TYPE) ? type.slice(PROBLEM_TYPE.length) : undefined;
+}

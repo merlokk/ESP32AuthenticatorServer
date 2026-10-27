@@ -36,6 +36,7 @@ import type {
   InviteUserRequest,
   InviteUserResponse,
   MyDevicesResponse,
+  OpenRegistrationWindowParams,
   PasskeysResponse,
   ProfileResponse,
   RegistrationWindowResponse,
@@ -761,21 +762,30 @@ export const useRemovePasskey = <TError = void,
       > => {
       return useMutation(getRemovePasskeyMutationOptions(options), queryClient);
     }
-    export const getOpenRegistrationWindowUrl = (id: string,) => {
+    export const getOpenRegistrationWindowUrl = (id: string,
+    params?: OpenRegistrationWindowParams,) => {
+  const normalizedParams = new URLSearchParams();
 
+  Object.entries(params || {}).forEach(([key, value]) => {
 
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
 
+  const stringifiedParams = normalizedParams.toString();
 
-  return `/api/identity/users/${id}/registration-window`
+  return stringifiedParams.length > 0 ? `/api/identity/users/${id}/registration-window?${stringifiedParams}` : `/api/identity/users/${id}/registration-window`
 }
 
 /**
- * Extends an invitation by InviteWindow while the user has no device, else opens DeviceWindow.
+ * Opens or extends the window from now for ?hours= (1 to 24). Without it: InviteWindow while the user has no device, else DeviceWindow.
  * @summary Let a device register to this user for a while (admin).
  */
-export const openRegistrationWindow = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<RegistrationWindowResponse> => {
+export const openRegistrationWindow = async (id: string,
+    params?: OpenRegistrationWindowParams, options?: Parameters<typeof customFetch>[1]): Promise<RegistrationWindowResponse> => {
 
-  return customFetch<RegistrationWindowResponse>(getOpenRegistrationWindowUrl(id),
+  return customFetch<RegistrationWindowResponse>(getOpenRegistrationWindowUrl(id,params),
   {
     ...options,
     method: 'PUT'
@@ -805,9 +815,9 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
 
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof openRegistrationWindow>>, OpenRegistrationWindowMutationVariables> = (props) => {
-          const {id} = props ?? {};
+          const {id,params} = props ?? {};
 
-          return  openRegistrationWindow(id,requestOptions)
+          return  openRegistrationWindow(id,params,requestOptions)
         }
 
 
@@ -820,7 +830,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
     export type OpenRegistrationWindowMutationResult = NonNullable<Awaited<ReturnType<typeof openRegistrationWindow>>>
 
     export type OpenRegistrationWindowMutationError = void
-    export type OpenRegistrationWindowMutationVariables = {id: string}
+    export type OpenRegistrationWindowMutationVariables = {id: string;params?: OpenRegistrationWindowParams}
 
     /**
  * @summary Let a device register to this user for a while (admin).

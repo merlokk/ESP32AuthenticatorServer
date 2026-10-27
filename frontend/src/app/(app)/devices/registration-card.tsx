@@ -13,10 +13,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { formatMinutes } from "@/lib/registration-window";
+import { formatMinutes, formatUntil } from "@/lib/registration-window";
 import { useRegistrationWindow } from "./registration-window";
-
-const timeFormat = new Intl.DateTimeFormat("en", { timeStyle: "short" });
 
 export function RegistrationCard() {
   const queryClient = useQueryClient();
@@ -63,8 +61,8 @@ export function RegistrationCard() {
         ) : state.open ? (
           <>
             <p className="text-sm" role="status">
-              Open until <span className="font-medium">{timeFormat.format(state.until)}</span> (
-              {formatMinutes(state.minutesLeft)} left). Now, on the device, register with:
+              Open until <span className="font-medium">{formatUntil(state.until, new Date())}</span>{" "}
+              ({formatMinutes(state.minutesLeft)} left). Now, on the device, register with:
             </p>
             <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 rounded-lg border px-4 py-3 text-sm">
               <dt className="text-muted-foreground">Server</dt>

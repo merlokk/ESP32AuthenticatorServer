@@ -2,7 +2,8 @@
 
 Status: backend host and the **Identity** module (device registration,
 TOTP and passkey sign-in, OIDC, user administration, profile); frontend: BFF
-proxy, Auth.js, sign-in, the app shell with dashboard, devices and profile. Sync is not built. Use cases:
+proxy, Auth.js, sign-in, the app shell with dashboard, devices, profile and
+admin (users, system). Sync is not built. Use cases:
 [use-cases.md](use-cases.md). Sections marked **open** are not decided.
 
 ## 1. Purpose
@@ -437,8 +438,11 @@ Auth.js's and the one at the authorization server.
   goes through `/connect/endsession`; the refresh token is not revoked yet.
   No server actions in sign-in or sign-out: an action's id changes with every
   build, so a page loaded before a rollout would call one that is gone.
-- The app (`src/app/(app)`): sidebar (Dashboard, Devices; Admin → System for
-  `canAdminister`), page, the user's menu (Gravatar, Profile, Sign out).
+- The app (`src/app/(app)`): sidebar (Dashboard, Devices; Admin → Users,
+  System for `canAdminister`), page, the user's menu (Gravatar, Profile, Sign out).
+  Users: the list; edit the user name, block or unblock, delete (not one's
+  own row), open the registration window for 1 h or 24 h or close it, invite
+  by e-mail (an existing address is said so: `user.email-taken`).
   System shows both parts' versions and the running configuration
   (`GET /api/identity/configuration`, admin, read-only, secrets as set or
   not). The frontend's version is git's like the backend's: `VERSION`/

@@ -8,7 +8,8 @@ phrase or the key; it reads only the plain store header.
 
 Status: backend host and the Identity module (device registration, TOTP and
 passkey sign-in, OIDC, user administration, profile); frontend: BFF proxy,
-Auth.js, sign-in, the app shell with dashboard, devices and profile. Use cases with done flags:
+Auth.js, sign-in, the app shell with dashboard, devices, profile and admin
+(users, system). Use cases with done flags:
 [use-cases.md](use-cases.md); tests come first.
 
 ## Overview

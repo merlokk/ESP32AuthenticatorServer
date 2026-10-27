@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Cpu, LayoutDashboard, Settings2, ShieldCheck, type LucideIcon } from "lucide-react";
+import { Cpu, LayoutDashboard, Settings2, ShieldCheck, Users, type LucideIcon } from "lucide-react";
 import { useGetProfile } from "@/api/generated/identity/identity";
 import {
   Sidebar,
@@ -27,7 +27,10 @@ const SECTIONS: Section[] = [
 
 // For administrators (canAdminister from the API, not the role name). A courtesy: the backend's
 // admin policy is the control.
-const ADMIN_SECTIONS: Section[] = [{ href: "/admin/system", label: "System", icon: Settings2 }];
+const ADMIN_SECTIONS: Section[] = [
+  { href: "/admin/users", label: "Users", icon: Users },
+  { href: "/admin/system", label: "System", icon: Settings2 },
+];
 
 export function AppSidebar() {
   const pathname = usePathname();

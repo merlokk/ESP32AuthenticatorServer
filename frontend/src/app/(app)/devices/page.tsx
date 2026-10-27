@@ -2,6 +2,10 @@ import type { Metadata } from "next";
 import { DevicesTable } from "./devices-table";
 import { RegistrationCard } from "./registration-card";
 
+// Behind the session (the layout's <Suspense>): nothing here prerenders, so instant-navigation
+// validation has no segment to check.
+export const instant = false;
+
 export const metadata: Metadata = {
   title: "Devices · ESP32 Authenticator",
 };

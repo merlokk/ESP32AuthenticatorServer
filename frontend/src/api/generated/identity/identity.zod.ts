@@ -104,11 +104,15 @@ export const RemovePasskeyParams = zod.object({
 export const RemovePasskeyResponse = zod.void()
 
 /**
- * Extends an invitation by InviteWindow while the user has no device, else opens DeviceWindow.
+ * Opens or extends the window from now for ?hours= (1 to 24). Without it: InviteWindow while the user has no device, else DeviceWindow.
  * @summary Let a device register to this user for a while (admin).
  */
 export const OpenRegistrationWindowParams = zod.object({
   "id": zod.string()
+})
+
+export const OpenRegistrationWindowQueryParams = zod.object({
+  "hours": zod.int().nullish()
 })
 
 export const OpenRegistrationWindowResponse = zod.object({

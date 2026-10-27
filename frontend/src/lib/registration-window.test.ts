@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatMinutes, windowState } from "./registration-window";
+import { formatMinutes, formatUntil, windowState } from "./registration-window";
 
 const now = new Date("2026-10-27T12:00:00Z");
 
@@ -30,5 +30,13 @@ describe("formatMinutes", () => {
     [1440, "24 h"],
   ])("%i → %s", (minutes, text) => {
     expect(formatMinutes(minutes)).toBe(text);
+  });
+});
+
+describe("formatUntil", () => {
+  it("is the time alone today and the day too otherwise", () => {
+    const today = new Date(2026, 9, 27, 18, 0);
+    expect(formatUntil(new Date(2026, 9, 27, 20, 35), today)).toBe("8:35 PM");
+    expect(formatUntil(new Date(2026, 9, 28, 19, 35), today)).toBe("Oct 28, 7:35 PM");
   });
 });

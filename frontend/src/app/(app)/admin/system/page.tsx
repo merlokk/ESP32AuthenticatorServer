@@ -3,6 +3,10 @@ import { AdminOnly } from "../admin-only";
 import { ConfigurationCard } from "./configuration-card";
 import { VersionsCard } from "./versions-card";
 
+// Behind the session (the layout's <Suspense>): nothing here prerenders, so instant-navigation
+// validation has no segment to check.
+export const instant = false;
+
 export const metadata: Metadata = {
   title: "System · ESP32 Authenticator",
 };

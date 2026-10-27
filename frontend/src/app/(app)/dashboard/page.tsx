@@ -1,6 +1,10 @@
 import type { Metadata } from "next";
 import { DeviceCount } from "./device-count";
 
+// Behind the session (the layout's <Suspense>): nothing here prerenders, so instant-navigation
+// validation has no segment to check.
+export const instant = false;
+
 export const metadata: Metadata = {
   title: "Dashboard · ESP32 Authenticator",
 };

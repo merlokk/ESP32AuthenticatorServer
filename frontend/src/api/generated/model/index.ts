@@ -18,6 +18,8 @@ export * from './inviteUserRequest';
 export * from './inviteUserResponse';
 export * from './myDevice';
 export * from './myDevicesResponse';
+export * from './openRegistrationWindowParams';
+export * from './openRegistrationWindowRequest';
 export * from './passkey';
 export * from './passkeysResponse';
 export * from './profileResponse';

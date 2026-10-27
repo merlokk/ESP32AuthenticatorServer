@@ -18,3 +18,18 @@ export function formatMinutes(minutes: number): string {
   if (hours === 0) return `${rest} min`;
   return rest === 0 ? `${hours} h` : `${hours} h ${rest} min`;
 }
+
+const timeOnly = new Intl.DateTimeFormat("en", { timeStyle: "short" });
+const dayAndTime = new Intl.DateTimeFormat("en", {
+  month: "short",
+  day: "numeric",
+  hour: "numeric",
+  minute: "2-digit",
+});
+
+/** "8:35 PM" today, "Oct 28, 7:35 PM" on another day: a 24-hour window ends tomorrow. */
+export function formatUntil(until: Date, now: Date): string {
+  return until.toDateString() === now.toDateString()
+    ? timeOnly.format(until)
+    : dayAndTime.format(until);
+}
