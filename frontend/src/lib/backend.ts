@@ -105,7 +105,8 @@ export async function forward(request: Request, options: ForwardOptions): Promis
 
   // A Blob, not the request's stream: on a 401 (a missing or expired token) Node's fetch re-reads
   // the body (fetch spec, 401 handling) and fails on a stream or a transferred buffer, so the caller
-  // saw a 502 instead of the 401. Bodies are small: JSON, a store file at most (Sync:MaxFileBytes).
+  // saw a 502 instead of the 401. Bodies are bounded: JSON, a store file (Sync:MaxFileBytes), a
+  // firmware image at most (Firmware:MaxImageBytes, ~8 MB).
   const body = hasBody ? await request.blob() : undefined;
 
   let upstream: Response;

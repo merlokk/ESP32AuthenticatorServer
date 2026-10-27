@@ -21,7 +21,7 @@ npm run api:generate           # OpenAPI -> src/api/generated (needs the backend
 | `src/app/auth/[...nextauth]`                                   | Auth.js (basePath `/auth`)                                                           |
 | `src/app/api/identity/me/passkeys/[[...path]]`                 | passkey calls → backend, token and cookies                                           |
 | `src/app/sign-in`, `src/app/sign-in/start`, `src/app/sign-out` | sign-in page; routes that start the flow and sign out                                |
-| `src/app/(app)`                                                | the signed-in app: shell, dashboard, devices, stores, profile, admin (users, system) |
+| `src/app/(app)`                                                | the signed-in app: shell, dashboard, devices, stores, profile, admin (users, firmware, system) |
 | `src/api/generated`                                            | Orval output (committed, never edited)                                               |
 | `src/app/health`                                               | the frontend's own probe                                                             |
 | `src/auth.ts`                                                  | Auth.js config, `getAccessToken()`                                                   |

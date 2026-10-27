@@ -4,9 +4,9 @@
  * AuthServer
  * OpenAPI spec version: v1
  */
+import type { FirmwareUpdate } from './firmwareUpdate';
 
 export interface ReportStatusResponse {
-  /** @nullable */
-  update?: string | null;
+  update?: FirmwareUpdate | null;
   time: number;
 }

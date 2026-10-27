@@ -12,7 +12,8 @@ UC-2, 3 `RegistrationWindowTests`; UC-6 `DeviceSignInTests`; UC-9
 `ProfileTests`; UC-22 `ConfigurationTests`; UC-30 to 35, 39 `SyncTests` (+
 `Sync.Tests/Domain`); UC-38 `DeviceStatusTests` (+
 `Identity.Tests/Domain/FirmwareVersionTests`); UC-40
-`Host.Tests/PingEndpointTests`.
+`Host.Tests/PingEndpointTests`; UC-41 to 44 `FirmwareTests` (+
+`Firmware.Tests/Domain`).
 
 ## Identity
 
@@ -127,7 +128,22 @@ The wire protocol: [device-protocol.md](device-protocol.md).
 
 - [x] **UC-38 Status.** A device reports its state (firmware required, Wi-Fi,
   BLE, battery and any other field, 4 KB at most); the report is kept, the
-  device marked seen, and the answer names a newer firmware release
-  (`Identity:LatestFirmware`) or null. The owner and the admin see firmware
-  and status with the device.
+  device marked seen, and the answer names the board's active release when
+  the device runs another version (UC-42), else null. The owner and the
+  admin see firmware and status with the device.
 - [x] **UC-40 Ping.** Anonymous: the server answers `ok` and its time.
+
+## Firmware
+
+- [x] **UC-41 Upload.** An admin uploads an image for a board; it is kept
+  only if it is this firmware's ESP32-S3 app image, whole (checksum, SHA-256),
+  within the OTA slot; its version is read from it; a version is on a board
+  once. New releases are inactive.
+- [x] **UC-42 Activate.** An admin makes a release its board's active one (the
+  previous one inactive), deactivates it, or deletes a release. The active
+  one is offered to the board's devices on any other version: an older one
+  rolls back.
+- [x] **UC-43 List.** A device lists the releases (all, or its board's),
+  newest upload first, the active one marked.
+- [x] **UC-44 OTA download.** A device fetches an image whole or one `Range`
+  at a time (206, `Content-Range`; 416 past the end); ETag is the SHA-256.

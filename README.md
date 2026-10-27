@@ -17,7 +17,7 @@ is not written yet.
 
 | Part        | Stack                                                                                       |
 | ----------- | ------------------------------------------------------------------------------------------- |
-| `backend/`  | .NET 10 modular monolith (Identity, Sync), FastEndpoints, EF Core, PostgreSQL 18, OpenIddict |
+| `backend/`  | .NET 10 modular monolith (Identity, Sync, Firmware), FastEndpoints, EF Core, PostgreSQL 18, OpenIddict |
 | `frontend/` | Next.js, shadcn/ui + Tailwind, TanStack Query; its server half is the BFF (Auth.js)          |
 
 Devices call the backend's device API directly. The browser talks only to the

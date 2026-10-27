@@ -8,11 +8,12 @@ import * as zod from 'zod';
 
 
 /**
- * A JSON object of at most 4 KB. firmware is required; the documented fields and any other are kept as sent. update: the newest release when it is above firmware, else null. time: the server's clock, Unix seconds.
+ * A JSON object of at most 4 KB. firmware is required, board names the build target; the documented fields and any other are kept as sent. update: the board's active release when firmware is another version, else null. time: the server's clock, Unix seconds.
  * @summary Report the device's state; learn of a newer firmware release (device).
  */
 export const ReportStatusBody = zod.object({
   "firmware": zod.string(),
+  "board": zod.string().nullish(),
   "mac": zod.string().nullish(),
   "wifi": zod.boolean().nullish(),
   "ble": zod.boolean().nullish(),
@@ -22,9 +23,41 @@ export const ReportStatusBody = zod.object({
 })
 
 export const ReportStatusResponse = zod.object({
-  "update": zod.string().nullish(),
+  "update": zod.union([zod.object({
+  "id": zod.string(),
+  "version": zod.string(),
+  "size": zod.int(),
+  "sha256": zod.string()
+}),zod.null()]).optional(),
   "time": zod.int()
 })
+
+/**
+ * active: the one the status answer offers. Any of them can be installed: GET /api/device/firmware/{id}/image.
+ * @summary Every firmware release, newest upload first; ?board= one board's (device).
+ */
+export const GetDeviceReleasesResponse = zod.object({
+  "releases": zod.array(zod.object({
+  "id": zod.string(),
+  "board": zod.string(),
+  "version": zod.string(),
+  "built": zod.string(),
+  "size": zod.int(),
+  "sha256": zod.string(),
+  "active": zod.boolean(),
+  "uploadedAt": zod.iso.datetime({"offset":true})
+}))
+})
+
+/**
+ * Range: bytes=first-last for a piece (206, Content-Range); past the end 416. ETag is the SHA-256: check it after the last piece, before switching the boot slot.
+ * @summary A firmware image, whole or in pieces (device).
+ */
+export const DownloadImageParams = zod.object({
+  "id": zod.string()
+})
+
+export const DownloadImageResponse = zod.unknown()
 
 export const PingResponse = zod.object({
   "status": zod.string(),

@@ -2,8 +2,10 @@
 
 Status: backend host, the **Identity** module (device registration, TOTP and
 passkey sign-in, OIDC, user administration, profile) and the **Sync** module
-(the device sync API, history); device status and ping; frontend: BFF proxy, Auth.js, sign-in, the
-app shell with dashboard, devices, stores, profile and admin (users, system).
+(the device sync API, history), the **Firmware** module (releases per board,
+OTA); device status and ping; frontend: BFF proxy, Auth.js, sign-in, the app
+shell with dashboard, devices, stores, profile and admin (users, firmware,
+system).
 The firmware has no sync client yet. Use cases:
 [use-cases.md](use-cases.md). Sections marked **open** are not decided.
 
@@ -61,6 +63,7 @@ browser ── frontend (React) ── backend (.NET 10, one process) ── Pos
 |---|---|---|
 | **Identity** | users, devices (key, TOTP secret), passkeys, OAuth clients and tokens (OpenIddict), the Data Protection key ring | `identity` |
 | **Sync** | stores (store id, seed id), store versions (header fields + ciphertext), the sync decision; a device is the `device_id` claim | `sync` |
+| **Firmware** | releases (board, version, image), the active one per board; `IFirmwareOffers` (Contracts) answers Identity's status call | `firmware` |
 
 An **Audit** module (who changed what, from which device) is a candidate, not
 decided.
@@ -137,18 +140,21 @@ backend/
 │       │   │   ├── Infrastructure/      # horizontal: DbContext, configurations, migrations
 │       │   │   └── IdentityModule.cs    # AddIdentityModule()
 │       │   └── AuthServer.Identity.Contracts/
-│       └── Sync/                        # same shape
+│       ├── Sync/                        # same shape
+│       └── Firmware/                    # same shape, with Contracts
 └── test/
     ├── AuthServer.ArchitectureTests/
     ├── AuthServer.Identity.Tests/
     ├── AuthServer.Sync.Tests/
+    ├── AuthServer.Firmware.Tests/
     ├── AuthServer.Host.Tests/           # the host's own wiring (WebApplicationFactory, no DB)
     └── AuthServer.IntegrationTests/     # Testcontainers PostgreSQL
 ```
 
 One implementation project per module (folders, not an
 Api/Application/Domain/Infrastructure split). Today: `Host`, `Shared`,
-Identity, Sync (no Contracts yet: nothing calls it), and the test projects.
+Identity, Sync (no Contracts yet: nothing calls it), Firmware (Contracts:
+`IFirmwareOffers`, for Identity), and the test projects.
 `backend/migrations.Dockerfile`
 + `backend/apply-migrations.sh` are the migrations image (§6).
 
@@ -225,8 +231,15 @@ Here: how the server does it.
   stored encrypted. mTLS was rejected: TLS ends at the ingress.
 - Status (`POST /api/device/status`) is Identity's: the report is kept as sent
   (`devices.status`, jsonb, 4 KB at most) with its `firmware` read out, the
-  device marked seen; the answer names `Identity:LatestFirmware` when its
-  x.y.z is above the reported one.
+  device marked seen; the answer is Firmware's (`IFirmwareOffers`): the
+  board's active release when the reported version is another (string
+  equality, never ordering: activating an older release rolls back).
+- Firmware (`/api/firmware/releases` admin, `/api/device/firmware...` device)
+  is Firmware's: an upload is checked as the firmware's OTA check does (ESP32-S3
+  app image, segments, checksum, SHA-256, `Firmware:Project`) and named by its
+  `esp_app_desc_t.version`; unique (board, version); one active per board
+  (a partial unique index). The image download serves one `Range` per request
+  (206; 416 past the end), read with `substring` from an uncompressed column.
 - Stores (`/api/device/stores...`) are Sync's: a store is (owner, store id,
   seed id, kind); the counter orders copies. An upload is one short
   transaction: upsert the store row, lock it (`for update`), compare the
@@ -279,6 +292,7 @@ generated TypeScript client in the frontend (generator: §9).
 database
 ├── schema identity   ← Identity DbContext only
 ├── schema sync       ← Sync DbContext only
+├── schema firmware   ← Firmware DbContext only
 └── schema ticker     ← TickerQ's store, owned by the host
 ```
 
@@ -288,6 +302,9 @@ database
   `head_version` the newest kept. `sync.store_versions`: the header fields,
   the writer `device_id`, upload time and the whole file (`bytea`), unique
   (store, version), the last `Sync:VersionsToKeep` per store.
+- `firmware.releases`: board, version, descriptor fields, size, SHA-256,
+  `active`, uploader, the image (`bytea`, storage `external`); unique (board,
+  version), unique board where active.
 - EF Core and the Npgsql provider upgrade together (same major). No direct
   `Npgsql` reference without a reason.
 - `dotnet ef` always names `--context` and `--project`; the startup project
@@ -324,12 +341,15 @@ a secret store in the cluster).
     "RefreshTokenLifetime": "08:00:00",
     "InviteWindow": "1.00:00:00",  // registration window without a device
     "DeviceWindow": "01:00:00",    // ... with one
-    "TotpEncryptionKey": "",       // secret: 32 bytes base64
-    "LatestFirmware": ""           // x.y.z offered to devices reporting an older one; empty: none
+    "TotpEncryptionKey": ""        // secret: 32 bytes base64
   },
   "Sync": {
     "VersionsToKeep": 20,          // copies kept per store
     "MaxFileBytes": 262144         // the largest store file accepted
+  },
+  "Firmware": {
+    "Project": "esp32-authenticator", // esp_app_desc_t.project_name; another is refused
+    "MaxImageBytes": 8257536       // the OTA slot (0x7E0000)
   }
 }
 ```

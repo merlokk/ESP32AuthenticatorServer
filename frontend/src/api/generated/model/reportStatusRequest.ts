@@ -8,6 +8,8 @@
 export interface ReportStatusRequest {
   firmware: string;
   /** @nullable */
+  board?: string | null;
+  /** @nullable */
   mac?: string | null;
   /** @nullable */
   wifi?: boolean | null;

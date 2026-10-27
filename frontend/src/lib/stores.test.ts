@@ -17,6 +17,7 @@ describe("stores", () => {
   it("formats sizes", () => {
     expect(formatBytes(512)).toBe("512 bytes");
     expect(formatBytes(130 * 1024)).toBe("130.0 KB");
+    expect(formatBytes(1536 * 1024)).toBe("1.5 MB");
   });
 
   it("names a device by its serial, or says it is gone", () => {

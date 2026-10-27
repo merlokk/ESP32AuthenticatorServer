@@ -8,14 +8,15 @@ phrase or the key; it reads only the plain store header.
 
 Status: backend host, the Identity module (device registration, TOTP and
 passkey sign-in, OIDC, user administration, profile) and the Sync module
-(device sync API, history); frontend: BFF proxy, Auth.js, sign-in, the app
-shell with dashboard, devices, stores, profile and admin (users, system). Use cases with done flags:
+(device sync API, history), the Firmware module (releases per board, OTA);
+frontend: BFF proxy, Auth.js, sign-in, the app shell with dashboard, devices,
+stores, profile and admin (users, firmware, system). Use cases with done flags:
 [use-cases.md](use-cases.md); tests come first.
 
 ## Overview
 
 - **backend/**: .NET 10 **modular monolith**: one deployable, modules
-  Identity and Sync, one PostgreSQL database with a schema per module;
+  Identity, Sync and Firmware, one PostgreSQL database with a schema per module;
   vertical feature slices over a horizontal domain model.
 - **frontend/**: Next.js + shadcn/ui + Tailwind, Orval + TanStack Query,
   react-hook-form + zod. Its server half is the BFF (Auth.js): tokens are
@@ -46,6 +47,7 @@ dotnet run --project backend\src\AuthServer.Host     # http://localhost:5080
 dotnet ef database update --project backend\src\Modules\Identity\AuthServer.Identity --startup-project backend\src\AuthServer.Host --context IdentityDbContext
 dotnet ef migrations add <Name> --project backend\src\Modules\Identity\AuthServer.Identity --startup-project backend\src\AuthServer.Host --context IdentityDbContext --output-dir Infrastructure/Persistence/Migrations
 # Sync: the same with --project backend\src\Modules\Sync\AuthServer.Sync --context SyncDbContext
+# Firmware: --project backend\src\Modules\Firmware\AuthServer.Firmware --context FirmwareDbContext
 docker build -f backend\migrations.Dockerfile -t authserver-migrations:dev backend
 docker build -t authserver-backend:dev --build-arg VERSION=$(git describe --tags --match=* --long) --build-arg COMMIT=$(git rev-parse HEAD) backend
 # the frontend image takes the same two build arguments (context frontend)

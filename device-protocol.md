@@ -2,7 +2,8 @@
 
 What the firmware ([ESP32Authenticator](../ESP32Authenticator)) says to the
 server, and what it gets back. Use cases: [use-cases.md](use-cases.md) UC-1 to 7
-(registration, sign-in), UC-30 to 40 (sync, status, ping); how the server does
+(registration, sign-in), UC-30 to 40 (sync, status, ping), UC-41 to 44
+(firmware); how the server does
 it: [architecture.md](architecture.md) §4.6.
 
 ## Conventions
@@ -24,11 +25,13 @@ it: [architecture.md](architecture.md) §4.6.
 | `POST /register` | the registration JWS | bind the device to an account |
 | `POST /connect/token` | a client assertion | get an access token |
 | `GET /api/device/me` | token | who the device is |
-| `POST /api/device/status` | token | report the device's state; learn of a firmware release |
+| `POST /api/device/status` | token | report the device's state; learn which firmware to run |
 | `GET /api/device/stores` | token | the account's stores, to choose one to adopt |
 | `POST /api/device/stores/heads` | token | the server's newest version of the device's stores |
 | `POST /api/device/stores/files` | token | upload a store |
 | `GET /api/device/stores/files/{storeId}/{seedId}/{kind}` | token | download a store |
+| `GET /api/device/firmware` | token | the firmware releases |
+| `GET /api/device/firmware/{id}/image` | token | a release's image, in pieces (OTA) |
 
 ## Ping
 
@@ -107,6 +110,7 @@ the web), so new firmware may add fields without a server change.
 ```json
 {
   "firmware": "0.5.0-174-g2f84ffa",
+  "board": "x4pro",
   "mac": "aa:bb:cc:dd:ee:ff",
   "wifi": true,
   "ble": false,
@@ -119,6 +123,7 @@ the web), so new firmware may add fields without a server change.
 | Field | Value |
 |---|---|
 | `firmware` | `esp_app_desc_t.version`: `x.y.z-<commits>-g<hash>[-dirty]` or `x.y.z-nogit`; 1–32 printable characters |
+| `board` | the build target (`devices/config.h` `BoardId`): `x4pro`, `dev`; without it nothing is offered |
 | `mac` | Wi-Fi MAC |
 | `wifi`, `ble` | on or off |
 | `battery` | percent |
@@ -126,14 +131,16 @@ the web), so new firmware may add fields without a server change.
 | `time` | the device's clock (0: none) |
 
 ```json
-200 {"update": "0.6.0", "time": 1793128051}
+200 {"update": {"id": "01a17f4a-…", "version": "0.6.0-0-gabc1234",
+                "size": 1843200, "sha256": "9f2c…"}, "time": 1793128051}
 200 {"update": null, "time": 1793128051}
 ```
 
-`update` is the newest firmware release (`Identity:LatestFirmware`) when its
-`x.y.z` is above the reported one; a build after a release (`0.6.0-3-g…`) is
-not behind it. `400 device-status.invalid`: not an object, over 4 KB, no or a
-bad `firmware`.
+`update` is the board's **active** release when `firmware` is any other
+version (an admin activating an older release rolls devices back); null when
+the device runs it or the board has none. Install it as in
+[Firmware](#firmware), with the person's consent. `400 device-status.invalid`:
+not an object, over 4 KB, no or a bad `firmware`.
 
 ## Stores
 
@@ -255,6 +262,44 @@ device has:
 Two devices uploading one version at the same moment: one is kept, the other
 gets 409. Nothing is lost on the server: the last 20 copies stay.
 
+## Firmware
+
+Releases are uploaded per board by an admin (web: Admin → Firmware), each
+named by its own `esp_app_desc_t.version`; one per board is active.
+
+`GET /api/device/firmware?board=x4pro` (without `board`: every board's),
+newest upload first:
+
+```json
+200 {"releases": [{
+  "id": "01a17f4a-ec9e-7733-85e7-b65f35c133c8", "board": "x4pro",
+  "version": "0.6.0-0-gabc1234", "built": "Oct 27 2026 21:07:30",
+  "size": 1843200, "sha256": "9f2c…", "active": true,
+  "uploadedAt": "2026-10-27T21:30:00+00:00"
+}]}
+```
+
+`400 firmware.board-unknown`. Any release can be installed, not only the
+active one (a person choosing a version on the device).
+
+**OTA**: `GET /api/device/firmware/{id}/image`, one piece per request:
+
+1. `ota::Begin(kWeb, size)`, then from offset 0, `Range: bytes=<offset>-<offset + 64 KB - 1>`:
+   `206`, `Content-Range: bytes a-b/size`, the bytes; `ota::Write` them, next
+   offset b + 1. A dropped link: ask for the same piece again.
+2. After the last piece: the SHA-256 of all bytes must be `sha256` (also the
+   `ETag`), then `ota::End`, restart; the trial boot confirms it.
+
+| Status | Meaning |
+|---|---|
+| 200 | no `Range`: the whole image |
+| 206 | the piece |
+| 416 | the range starts past the end (`Content-Range: bytes */size`) |
+| 404 | `firmware.release-not-found`: deleted meanwhile; report status again |
+
+The device still runs its own image check as the bytes stream (chip, project,
+segments, checksum): the server checked the same on upload.
+
 ## Errors
 
 | Status | `type` | Call |
@@ -269,6 +314,8 @@ gets 409. Nothing is lost on the server: the last 20 copies stay.
 | 413 | `sync.file-too-large` | upload |
 | 409 | `sync.not-newer` | upload |
 | 404 | `sync.store-not-found` | download |
+| 400 | `firmware.board-unknown` | firmware list |
+| 404 | `firmware.release-not-found` | image |
 | 401 | none | a missing or expired token: sign in again |
 | 403 | none | a person's token, not a device's |
 | 502 | `about:blank` | the server is up but its backend is not: try later |

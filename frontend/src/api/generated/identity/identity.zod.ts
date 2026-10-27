@@ -251,8 +251,7 @@ export const GetConfigurationResponse = zod.object({
   "refreshTokenLifetimeSeconds": zod.int(),
   "inviteWindowSeconds": zod.int(),
   "deviceWindowSeconds": zod.int(),
-  "totpEncryptionKeySet": zod.boolean(),
-  "latestFirmware": zod.string()
+  "totpEncryptionKeySet": zod.boolean()
 })
 
 /**

@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import {
   Cpu,
   Database,
+  HardDriveDownload,
   LayoutDashboard,
   Settings2,
   ShieldCheck,
@@ -38,6 +39,7 @@ const SECTIONS: Section[] = [
 // admin policy is the control.
 const ADMIN_SECTIONS: Section[] = [
   { href: "/admin/users", label: "Users", icon: Users },
+  { href: "/admin/firmware", label: "Firmware", icon: HardDriveDownload },
   { href: "/admin/system", label: "System", icon: Settings2 },
 ];
 

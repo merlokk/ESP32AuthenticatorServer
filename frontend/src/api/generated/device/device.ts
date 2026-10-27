@@ -24,6 +24,7 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  DeviceReleasesResponse,
   PingResponse,
   ReportStatusRequest,
   ReportStatusResponse
@@ -60,7 +61,7 @@ export const getReportStatusUrl = () => {
 }
 
 /**
- * A JSON object of at most 4 KB. firmware is required; the documented fields and any other are kept as sent. update: the newest release when it is above firmware, else null. time: the server's clock, Unix seconds.
+ * A JSON object of at most 4 KB. firmware is required, board names the build target; the documented fields and any other are kept as sent. update: the board's active release when firmware is another version, else null. time: the server's clock, Unix seconds.
  * @summary Report the device's state; learn of a newer firmware release (device).
  */
 export const reportStatus = async (reportStatusRequest: ReportStatusRequest, options?: Parameters<typeof customFetch>[1]): Promise<ReportStatusResponse> => {
@@ -139,7 +140,209 @@ export const useReportStatus = <TError = void,
       > => {
       return useMutation(getReportStatusMutationOptions(options), queryClient);
     }
-    export const getPingUrl = () => {
+    export const getGetDeviceReleasesUrl = () => {
+
+
+
+
+  return `/api/device/firmware`
+}
+
+/**
+ * active: the one the status answer offers. Any of them can be installed: GET /api/device/firmware/{id}/image.
+ * @summary Every firmware release, newest upload first; ?board= one board's (device).
+ */
+export const getDeviceReleases = async ( options?: Parameters<typeof customFetch>[1]): Promise<DeviceReleasesResponse> => {
+
+  return customFetch<DeviceReleasesResponse>(getGetDeviceReleasesUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetDeviceReleasesQueryKey = () => {
+    return [
+    `/api/device/firmware`
+    ] as const;
+    }
+
+
+export const getGetDeviceReleasesQueryOptions = <TData = Awaited<ReturnType<typeof getDeviceReleases>>, TError = void>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getDeviceReleases>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetDeviceReleasesQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getDeviceReleases>>> = ({ signal }) => getDeviceReleases({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getDeviceReleases>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetDeviceReleasesQueryResult = NonNullable<Awaited<ReturnType<typeof getDeviceReleases>>>
+export type GetDeviceReleasesQueryError = void
+
+
+export function useGetDeviceReleases<TData = Awaited<ReturnType<typeof getDeviceReleases>>, TError = void>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getDeviceReleases>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getDeviceReleases>>,
+          TError,
+          Awaited<ReturnType<typeof getDeviceReleases>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetDeviceReleases<TData = Awaited<ReturnType<typeof getDeviceReleases>>, TError = void>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getDeviceReleases>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getDeviceReleases>>,
+          TError,
+          Awaited<ReturnType<typeof getDeviceReleases>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetDeviceReleases<TData = Awaited<ReturnType<typeof getDeviceReleases>>, TError = void>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getDeviceReleases>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Every firmware release, newest upload first; ?board= one board's (device).
+ */
+
+export function useGetDeviceReleases<TData = Awaited<ReturnType<typeof getDeviceReleases>>, TError = void>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getDeviceReleases>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetDeviceReleasesQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+export const getDownloadImageUrl = (id: string,) => {
+
+
+
+
+  return `/api/device/firmware/${id}/image`
+}
+
+/**
+ * Range: bytes=first-last for a piece (206, Content-Range); past the end 416. ETag is the SHA-256: check it after the last piece, before switching the boot slot.
+ * @summary A firmware image, whole or in pieces (device).
+ */
+export const downloadImage = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<Blob> => {
+
+  return customFetch<Blob>(getDownloadImageUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getDownloadImageQueryKey = (id: string,) => {
+    return [
+    `/api/device/firmware/${id}/image`
+    ] as const;
+    }
+
+
+export const getDownloadImageQueryOptions = <TData = Awaited<ReturnType<typeof downloadImage>>, TError = void>(id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof downloadImage>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getDownloadImageQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof downloadImage>>> = ({ signal }) => downloadImage(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof downloadImage>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type DownloadImageQueryResult = NonNullable<Awaited<ReturnType<typeof downloadImage>>>
+export type DownloadImageQueryError = void
+
+
+export function useDownloadImage<TData = Awaited<ReturnType<typeof downloadImage>>, TError = void>(
+ id: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof downloadImage>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof downloadImage>>,
+          TError,
+          Awaited<ReturnType<typeof downloadImage>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useDownloadImage<TData = Awaited<ReturnType<typeof downloadImage>>, TError = void>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof downloadImage>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof downloadImage>>,
+          TError,
+          Awaited<ReturnType<typeof downloadImage>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useDownloadImage<TData = Awaited<ReturnType<typeof downloadImage>>, TError = void>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof downloadImage>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary A firmware image, whole or in pieces (device).
+ */
+
+export function useDownloadImage<TData = Awaited<ReturnType<typeof downloadImage>>, TError = void>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof downloadImage>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getDownloadImageQueryOptions(id,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+export const getPingUrl = () => {
 
 
 

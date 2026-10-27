@@ -25,7 +25,9 @@ export function formatModified(seconds: number): string {
 
 /** "1,234 bytes", "12.3 KB". */
 export function formatBytes(bytes: number): string {
-  return bytes < 1024 ? `${bytes} bytes` : `${(bytes / 1024).toFixed(1)} KB`;
+  if (bytes < 1024) return `${bytes} bytes`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 }
 
 /** A device id as the person knows the device: its serial, or a removed one. */
