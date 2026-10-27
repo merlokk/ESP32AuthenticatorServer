@@ -97,17 +97,20 @@ export async function forward(request: Request, options: ForwardOptions): Promis
   const target = `${backendUrl()}${url.pathname}${url.search}`;
   const hasBody = request.method !== "GET" && request.method !== "HEAD";
 
+  // A Blob, not the request's stream: on a 401 (a missing or expired token) Node's fetch re-reads
+  // the body (fetch spec, 401 handling) and fails on a stream or a transferred buffer, so the caller
+  // saw a 502 instead of the 401. Bodies are small: JSON, a store file at most (Sync:MaxFileBytes).
+  const body = hasBody ? await request.blob() : undefined;
+
   let upstream: Response;
   try {
     upstream = await fetch(target, {
       method: request.method,
       headers: upstreamRequestHeaders(request.headers, url, options),
-      body: hasBody ? request.body : undefined,
-      // Streams the body rather than buffering it (required by fetch for a stream body).
-      ...(hasBody ? { duplex: "half" } : {}),
+      body: body && body.size > 0 ? body : undefined,
       redirect: options.redirect,
       cache: "no-store",
-    } as RequestInit);
+    });
   } catch {
     return Response.json(
       {
