@@ -1,6 +1,6 @@
 "use server";
 
-import { signIn, signOut } from "@/auth";
+import { AUTH_BASE_PATH, signIn, signOut } from "@/auth";
 import { isAuthorizeUrl, safeReturnUrl } from "@/lib/return-url";
 
 // Both actions answer with a URL rather than redirecting: the next stop is /connect/**, a route
@@ -13,7 +13,13 @@ import { isAuthorizeUrl, safeReturnUrl } from "@/lib/return-url";
 export async function continueSignIn(returnUrl: string): Promise<string> {
   const target = safeReturnUrl(returnUrl);
   if (isAuthorizeUrl(target)) return target;
-  return (await signIn("authserver", { redirectTo: target, redirect: false })) as string;
+  const url = (await signIn("authserver", { redirectTo: target, redirect: false })) as string;
+  // Auth.js answers its own error page, rather than throwing, when discovery fails (backend down):
+  // the caller shows "try again" instead of sending the browser there.
+  if (new URL(url, "http://origin.invalid").pathname.startsWith(`${AUTH_BASE_PATH}/error`)) {
+    throw new Error("The sign-in could not start.");
+  }
+  return url;
 }
 
 /** Ends both sessions: Auth.js's here, the authorization server's at its end-session endpoint. */

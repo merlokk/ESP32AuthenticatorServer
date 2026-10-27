@@ -18,6 +18,8 @@ export default defineConfig({
       // No base URL: every call is a relative path through the one mutator.
       override: {
         mutator: { path: "src/api/fetch.ts", name: "customFetch" },
+        // The mutator answers the body and throws ApiError otherwise: no {data, status} wrapper.
+        fetch: { includeHttpResponseReturnType: false },
       },
     },
   },
@@ -27,6 +29,8 @@ export default defineConfig({
       target: "src/api/generated/zod.ts",
       client: "zod",
       mode: "tags-split",
+      // tags-split writes <tag>/<tag>.ts for both outputs: without this the schemas overwrite the hooks.
+      fileExtension: ".zod.ts",
     },
   },
 });

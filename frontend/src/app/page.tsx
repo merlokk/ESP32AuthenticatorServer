@@ -1,9 +1,11 @@
 import { Suspense } from "react";
 import { connection } from "next/server";
 import { ShieldCheck } from "lucide-react";
+import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { backendUrl } from "@/lib/backend";
-import { SignInButton, SignOutButton } from "./account-buttons";
+import { DEFAULT_RETURN_URL } from "@/lib/return-url";
+import { SignInButton } from "./sign-in-button";
 
 export default function Home() {
   return (
@@ -26,27 +28,17 @@ export default function Home() {
   );
 }
 
-// Who is signed in, from the session cookie at request time.
+// Signed in: straight to the app. Otherwise the way in.
 async function Account() {
   // Auth.js draws random bytes (jose) before it reads the cookie: request time, not prerender.
   await connection();
   const session = await auth();
-  if (!session || session.error) {
-    return (
-      <div>
-        <SignInButton />
-      </div>
-    );
+  if (session && !session.error) {
+    redirect(DEFAULT_RETURN_URL);
   }
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border px-4 py-3">
-      <p className="text-sm">
-        Signed in as <span className="font-medium">{session.user?.name}</span>
-        {session.user?.email && (
-          <span className="text-muted-foreground"> ({session.user.email})</span>
-        )}
-      </p>
-      <SignOutButton />
+    <div>
+      <SignInButton />
     </div>
   );
 }

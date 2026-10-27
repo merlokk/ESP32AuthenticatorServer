@@ -1,7 +1,7 @@
 // Where the sign-in page sends the browser afterwards. The value arrives in a query string, from
 // whoever wrote the link, so only a path on this app's own origin passes.
 
-export const DEFAULT_RETURN_URL = "/";
+export const DEFAULT_RETURN_URL = "/dashboard";
 
 /** A path on this origin ("/devices?x=1"), or the default for anything else. */
 export function safeReturnUrl(value: string | undefined | null): string {

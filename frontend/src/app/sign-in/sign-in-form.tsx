@@ -4,12 +4,12 @@ import { useState, useSyncExternalStore } from "react";
 import { useForm } from "react-hook-form";
 import { KeyRound } from "lucide-react";
 import { z } from "zod";
+import { failureKind } from "@/api/errors";
 import {
   beginPasskeySignIn,
   completePasskeySignIn,
-  signInFailure,
   signInWithTotp,
-} from "@/api/sign-in";
+} from "@/api/generated/identity/identity";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -48,7 +48,7 @@ export function SignInForm({ returnUrl }: { returnUrl: string }) {
   function fail(error: unknown) {
     setStatus({
       kind: "failed",
-      message: signInFailure(error) === "refused" ? REFUSED : UNREACHABLE,
+      message: failureKind(error) === "refused" ? REFUSED : UNREACHABLE,
     });
   }
 

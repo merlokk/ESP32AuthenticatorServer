@@ -6,6 +6,7 @@ import { auth } from "@/auth";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { isAuthorizeUrl, safeReturnUrl } from "@/lib/return-url";
 import { SignInForm } from "./sign-in-form";
+import { StartSignIn } from "./start-sign-in";
 
 export const metadata: Metadata = {
   title: "Sign in · ESP32 Authenticator",
@@ -39,14 +40,17 @@ async function SignIn({ searchParams }: Pick<PageProps<"/sign-in">, "searchParam
   const { returnUrl } = await searchParams;
   const target = safeReturnUrl(typeof returnUrl === "string" ? returnUrl : undefined);
 
-  // Signed in here already: nothing to do, unless the authorization server asked (its own cookie
-  // is gone, which this app's session cannot tell).
+  // The form only when the authorization server asked for it (its own cookie is gone, which this
+  // app's session cannot tell).
+  if (isAuthorizeUrl(target)) {
+    return <SignInForm returnUrl={target} />;
+  }
+
   // Auth.js draws random bytes (jose) before it reads the cookie: request time, not prerender.
   await connection();
   const session = await auth();
-  if (session && !session.error && !isAuthorizeUrl(target)) {
+  if (session && !session.error) {
     redirect(target);
   }
-
-  return <SignInForm returnUrl={target} />;
+  return <StartSignIn returnUrl={target} />;
 }

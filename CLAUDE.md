@@ -7,8 +7,8 @@ newest copy. **Zero knowledge**: the server never has the PIN, the seed
 phrase or the key; it reads only the plain store header.
 
 Status: backend host and the Identity module (device registration, TOTP and
-passkey sign-in, OIDC, user administration); frontend: BFF proxy, Auth.js,
-the sign-in page. Use cases with done flags:
+passkey sign-in, OIDC, user administration, profile); frontend: BFF proxy,
+Auth.js, sign-in, the app shell with dashboard and profile. Use cases with done flags:
 [use-cases.md](use-cases.md); tests come first.
 
 ## Overview

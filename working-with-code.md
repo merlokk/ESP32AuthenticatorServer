@@ -88,6 +88,19 @@ After a rollout:
 - `/health/ready` is 200;
 - the changed page or call works in a browser (sign in, then the feature).
 
+Logs and pods: `kubectl`, context `merlokk`, namespace `authserver`. The API
+port is closed to the internet: open a tunnel first and keep it running.
+
+```sh
+ssh -N -L 6443:127.0.0.1:6443 root@<server>
+kubectl --context merlokk -n authserver get pods
+kubectl --context merlokk -n authserver logs deploy/frontend --since=1h   # [auth][error] lines
+kubectl --context merlokk -n authserver logs deploy/backend --since=1h
+```
+
+A tunnel opened in Windows is not `127.0.0.1` inside WSL: run `kubectl` on the
+same side as `ssh`.
+
 A failed migration stops the rollout and the old pods keep running. Roll
 back by deploying the previous tag; a migration is never rolled back, which
 is why every one is expand-then-contract.
@@ -100,8 +113,17 @@ is why every one is expand-then-contract.
   random bytes Auth.js draws. Read `frontend/node_modules/next/dist/docs/`
   before writing Next code.
 - **BFF cookies**: `/api/**` drops cookies both ways. A backend call whose
-  answer is a cookie (sign-in) needs its own route with `forwardCookies`.
+  answer or state is a cookie (sign-in, a passkey ceremony) needs its own
+  route with `forwardCookies`. Integration tests do not catch it: the test
+  client keeps cookies; the walk below does.
+- **Auth.js and discovery**: it refuses a provider without
+  `userinfo_endpoint` (the callback fails: "Server error"), and answers its
+  own error URL instead of throwing when discovery fails.
 - **A route handler is not a page**: reach `/connect/**` by
   `window.location`, not the router or a server-action `redirect()`.
-- **Generated client**: `npm run api:generate` needs the backend's Swagger;
-  generated code is never edited.
+- **Generated client**: `npm run api:generate` needs the backend's Swagger
+  (`BACKEND_URL`); generated code is committed and never edited.
+- **Walk the whole path before a release** that touches sign-in: register a
+  device as the firmware does (first one = admin on an empty database), sign
+  in by TOTP, then passkeys on a Chromium virtual authenticator. Unit and e2e
+  tests run without a backend and do not cover it.

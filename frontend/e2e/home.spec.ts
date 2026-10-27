@@ -3,7 +3,8 @@ import { expect, test } from "@playwright/test";
 test("home page renders and reports the backend", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByRole("heading", { name: "ESP32 Authenticator" })).toBeVisible();
-  await expect(page.getByText(/^Backend: /)).toBeVisible();
+  // The answer, not the streaming placeholder "Backend: …".
+  await expect(page.getByText(/^Backend: [^…]/)).toBeVisible();
 });
 
 test("health answers without the backend", async ({ request }) => {
