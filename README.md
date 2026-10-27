@@ -8,8 +8,9 @@ hardware authenticator. It keeps each user's encrypted store files
 It reads only the plain store header (store id, seed id, version, modification
 time) and never serves a version older than the one a device already has.
 
-Status: early. Backend host (health, version, metrics) and frontend skeleton
-(BFF, Auth.js) are in place; sign-in and sync are not built yet.
+Status: early. The backend's Identity module is in place (device
+registration, sign-in by device TOTP or passkey, user administration; see
+[use-cases.md](use-cases.md)); the sign-in pages and sync are not built yet.
 
 ## Parts
 
@@ -24,7 +25,8 @@ frontend; tokens are issued by the backend and never reach the browser.
 ## Run
 
 Needs Docker. Copy `.env.example` to `.env` and set `AUTH_SECRET`
-(`npx auth secret`), then:
+(`npx auth secret`) and `TOTP_ENCRYPTION_KEY` (`openssl rand -base64 32`), then
+(the `migrations` service migrates the database before the backend starts):
 
 ```sh
 docker compose up --build -d   # app http://localhost:3100, backend :5180, PostgreSQL :5433
@@ -42,7 +44,7 @@ cd frontend && npm ci && npm run dev               # http://localhost:3000, see 
 Backend probes: `/health/live`, `/health/ready`, `/api/version`, `/metrics`.
 
 CI ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) tests both halves and pushes
-`ghcr.io/merlokk/esp32authenticatorserver-{backend,frontend}`: `sha-<short>` on every push,
+`ghcr.io/merlokk/esp32authenticatorserver-{backend,frontend,migrations}`: `sha-<short>` on every push,
 `latest` on main, `x.y.z` on a `vx.y.z` tag.
 
 ## Docs

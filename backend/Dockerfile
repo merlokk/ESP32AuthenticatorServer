@@ -10,6 +10,8 @@ WORKDIR /src
 COPY NuGet.config Directory.Build.props Directory.Packages.props AuthServer.slnx ./
 COPY src/AuthServer.Host/AuthServer.Host.csproj src/AuthServer.Host/
 COPY src/AuthServer.Shared/AuthServer.Shared.csproj src/AuthServer.Shared/
+COPY src/Modules/Identity/AuthServer.Identity/AuthServer.Identity.csproj src/Modules/Identity/AuthServer.Identity/
+COPY src/Modules/Identity/AuthServer.Identity.Contracts/AuthServer.Identity.Contracts.csproj src/Modules/Identity/AuthServer.Identity.Contracts/
 RUN dotnet restore src/AuthServer.Host/AuthServer.Host.csproj
 
 COPY src/ src/

@@ -6,8 +6,10 @@ files (`vault.bin`, `fido.bin`) and gives every device of that user the
 newest copy. **Zero knowledge**: the server never has the PIN, the seed
 phrase or the key; it reads only the plain store header.
 
-Status: backend host (health, version, metrics) and frontend skeleton (BFF
-proxy, Auth.js); no modules yet, so no sign-in.
+Status: backend host and the Identity module (device registration, TOTP and
+passkey sign-in, OIDC, user administration; no pages yet); frontend skeleton
+(BFF proxy, Auth.js). Use cases with done flags:
+[use-cases.md](use-cases.md); tests come first.
 
 ## Overview
 
@@ -34,8 +36,13 @@ in `backend/Directory.Packages.props`.
 
 ```powershell
 dotnet build backend\AuthServer.slnx                 # warnings are errors
-dotnet test backend\AuthServer.slnx
+dotnet test backend\AuthServer.slnx                  # integration tests need Docker
 dotnet run --project backend\src\AuthServer.Host     # http://localhost:5080
+# once: dotnet user-secrets --project backend\src\AuthServer.Host set Identity:TotpEncryptionKey <openssl rand -base64 32>
+#       (also ConnectionStrings:AuthServer, Identity:PublicOrigin http://localhost:3000)
+dotnet ef database update --project backend\src\Modules\Identity\AuthServer.Identity --startup-project backend\src\AuthServer.Host --context IdentityDbContext
+dotnet ef migrations add <Name> --project backend\src\Modules\Identity\AuthServer.Identity --startup-project backend\src\AuthServer.Host --context IdentityDbContext --output-dir Infrastructure/Persistence/Migrations
+docker build -f backend\migrations.Dockerfile -t authserver-migrations:dev backend
 docker build -t authserver-backend:dev --build-arg VERSION=0.1.0 --build-arg COMMIT=$(git rev-parse HEAD) backend
 docker run --rm -p 8080:8080 authserver-backend:dev  # listens on 8080, non-root
 ```
@@ -43,7 +50,8 @@ docker run --rm -p 8080:8080 authserver-backend:dev  # listens on 8080, non-root
 Probes: `/health/live`, `/health/ready`, `/health`, `/api/version`, `/metrics`.
 The product version is `<Version>` in `backend/Directory.Build.props`.
 
-Whole stack in Docker (`.env.example` → `.env`, set `AUTH_SECRET`):
+Whole stack in Docker (`.env.example` → `.env`, set `AUTH_SECRET` and
+`TOTP_ENCRYPTION_KEY`; the `migrations` service runs before the backend):
 
 ```powershell
 docker compose up --build -d   # app :3100, backend :5180, PostgreSQL :5433
@@ -81,8 +89,8 @@ Next.js 16 differs from older versions (`proxy.ts`, Cache Components): read
 - `TreatWarningsAsErrors` is on: the build is the gate.
 - DTOs and Problem Details `type`s are public API; generated client code is
   never edited.
-- Never migrate at startup outside Development; migrations are
-  expand-then-contract.
+- Never migrate at startup, in any environment: the migrations job does;
+  migrations are expand-then-contract.
 - No secrets in git, `appsettings.Development.json` included.
 - Store ciphertext, PINs, seed phrases and tokens never in logs or error
   responses.

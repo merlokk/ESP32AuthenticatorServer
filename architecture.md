@@ -1,8 +1,9 @@
 # Architecture
 
-Status: the backend host (health, version, metrics) and the frontend
-skeleton (BFF proxy, Auth.js) exist; no modules yet, so no sign-in.
-Sections marked **open** are not decided.
+Status: backend host and the **Identity** module (device registration,
+TOTP and passkey sign-in, OIDC, user administration; backend only, no pages
+yet); frontend skeleton (BFF proxy, Auth.js). Sync is not built. Use cases:
+[use-cases.md](use-cases.md). Sections marked **open** are not decided.
 
 ## 1. Purpose
 
@@ -54,8 +55,8 @@ browser ── frontend (React) ── backend (.NET 10, one process) ── Pos
 
 | Module | Owns | Schema |
 |---|---|---|
-| **Identity** | users, passwords, passkeys, OAuth clients and tokens (OpenIddict), device credentials | `identity` |
-| **Sync** | devices, stores (store id, seed id), store versions (header fields + ciphertext), the sync decision | `sync` |
+| **Identity** | users, devices (key, TOTP secret), passkeys, OAuth clients and tokens (OpenIddict), the Data Protection key ring | `identity` |
+| **Sync** | stores (store id, seed id), store versions (header fields + ciphertext), the sync decision; a device is the `device_id` claim | `sync` |
 
 An **Audit** module (who changed what, from which device) is a candidate, not
 decided.
@@ -85,11 +86,11 @@ Enforced by architecture tests (ArchUnitNET), not by review.
 | Endpoints, OpenAPI | `FastEndpoints` + `FastEndpoints.Swagger` 8.3 |
 | Persistence | EF Core 10 + `Npgsql.EntityFrameworkCore.PostgreSQL` 10, PostgreSQL 18 |
 | Migrations | `Microsoft.EntityFrameworkCore.Design` + `dotnet-ef` (bundles) |
-| Users, passwords, passkeys | `Microsoft.AspNetCore.Identity.EntityFrameworkCore` 10 |
-| Authorization server (OIDC) | `OpenIddict.AspNetCore` + `OpenIddict.EntityFrameworkCore` 7.6 |
-| Token validation in modules | `Microsoft.AspNetCore.Authentication.JwtBearer` 10 (not OpenIddict `UseLocalServer()`: keeps Identity extractable) |
-| WebAuthn beyond sign-in | `Fido2` + `Fido2.Models` 4.0 (only if needed; not `Fido2.AspNet`) |
-| Background jobs | `TickerQ` + `TickerQ.EntityFrameworkCore` 10.4, own `ticker` schema, no dashboard |
+| Users, passkeys, lockout | `Microsoft.AspNetCore.Identity.EntityFrameworkCore` 10 (no passwords) |
+| Authorization server (OIDC) | `OpenIddict.AspNetCore` + `OpenIddict.EntityFrameworkCore` 7.7 |
+| Token validation in modules | `Microsoft.AspNetCore.Authentication.JwtBearer` 10 (not OpenIddict `UseLocalServer()`: keeps Identity extractable); Identity hands it the signing key in-process |
+| Key ring | `Microsoft.AspNetCore.DataProtection.EntityFrameworkCore` 10 (in `identity`) |
+| Background jobs | `TickerQ` + `TickerQ.EntityFrameworkCore` 10.5, own `ticker` schema, no dashboard |
 | Metrics | `OpenTelemetry.Extensions.Hosting` + `OpenTelemetry.Exporter.Prometheus.AspNetCore` (pre-release: exact pin) |
 | In-process dispatch | FastEndpoints command bus (no MediatR) |
 | Mapping | by hand; Mapperly if mapping grows (not AutoMapper) |
@@ -97,8 +98,8 @@ Enforced by architecture tests (ArchUnitNET), not by review.
 | Time | `TimeProvider` (no `DateTime.UtcNow` in testable code) |
 | Outbound HTTP | typed `HttpClient`, attempts bounded by hand; no SDKs |
 
-Tests: `xunit` 2.9.3 + `xunit.runner.visualstudio` 3.1.5 +
-`Microsoft.NET.Test.Sdk` 18.0.1 (the trio pinned together), `Shouldly`
+Tests: `xunit` 2.9.3 + `xunit.runner.visualstudio` 4.0 +
+`Microsoft.NET.Test.Sdk` 18.11 (the trio pinned together), `Shouldly`
 (not FluentAssertions: v8 licence), `NSubstitute` (not Moq),
 `coverlet.collector`, `Microsoft.AspNetCore.Mvc.Testing` +
 `Testcontainers.PostgreSql` (real PostgreSQL, no in-memory provider),
@@ -142,9 +143,9 @@ backend/
 ```
 
 One implementation project per module (folders, not an
-Api/Application/Domain/Infrastructure split). Today only `Host`, `Shared` and
-`Host.Tests` exist; modules and the other test projects come with the first
-feature.
+Api/Application/Domain/Infrastructure split). Today: `Host`, `Shared`,
+Identity, and the test projects except `Sync.Tests`. `backend/migrations.Dockerfile`
++ `backend/apply-migrations.sh` are the migrations image (§6).
 
 **Image** (`backend/Dockerfile`): `sdk:10.0` restores from the project files
 alone (cached layer), publishes with `-p:Version=$VERSION` and
@@ -182,11 +183,11 @@ needs the use case.
 
 ### 4.5 Host
 
-Wired today: `TimeProvider`, forwarded headers, OpenTelemetry metrics
-(ASP.NET Core meters), health checks, the routes below except the
-FastEndpoints and OpenIddict ones. FastEndpoints refuses to start with no
-endpoint, so it comes with the first module, as do Swagger, JwtBearer,
-TickerQ and the PostgreSQL readiness check.
+Wired today: everything below except TickerQ (with the first job) and the
+command bus (with the first cross-module call). Policies (`IdentityPolicies`
+in `AuthServer.Identity.Contracts`): `account` (a user token), `admin`,
+`device` (a device token: has `device_id`). JwtBearer keeps the token's claim
+names (`MapInboundClaims = false`).
 
 Configured once in `Program.cs`, never by a module: FastEndpoints (module
 assemblies listed), Swagger (`ShortSchemaNames`, non-nullable properties
@@ -205,20 +206,73 @@ OpenTelemetry metrics, health checks.
 
 ### 4.6 Device API
 
-**Open.** To decide:
+A device talks to `https://<server>` (its configured server name) through the
+ingress and the BFF, like a browser. Its private key and the server's TOTP
+secret live in its SPIFFS.
 
-- Device authentication: a device token issued when the device is paired on
-  the site (QR code on the e-ink screen), or mTLS with a per-device key.
-  The PIN and the seed phrase are never sent.
-- Endpoints, roughly: get the server's header for a store id; upload a new
-  version (header + ciphertext); download the newest; report the version the
-  device holds.
-- Concurrency: an upload names the version it was based on; a stale base is
-  refused and the device syncs first.
-- Size: a store is up to ~130 KB (X4 Pro: 125 FIDO2 credentials); kept as
-  `bytea` in PostgreSQL. How many old versions to keep: open (a TickerQ
-  prune job).
-- The device side: HTTPS client on ESP-IDF, the server certificate pinned.
+**Registration** `POST /api/identity/devices/register`, anonymous, JSON:
+
+| Field | Value |
+|---|---|
+| `email` | the account's address, as typed on the device |
+| `hardwareId` | 1–64 printable ASCII, no spaces; unique on the server |
+| `mac` | `AA:BB:CC:DD:EE:FF` (`-` or no separator also accepted) |
+| `totpSecret` | base32, 10–64 bytes: the secret the device shows codes from (RFC 6238, SHA-1, 30 s, 6 digits) |
+| `publicKey` | base64url of the P-256 point: 65 bytes `04‖X‖Y` or 64 bytes `X‖Y` |
+| `signature` | base64url ECDSA P-256 / SHA-256 over the message below: 64 bytes `r‖s` (or DER) |
+
+Message (UTF-8, `\n` between lines, no trailing newline), the fields exactly
+as sent: `esp32authenticator-device-registration-v1`, `email`, `hardwareId`,
+`mac`, `totpSecret`, `publicKey`.
+
+The signature proves the key; the permission is the account's registration
+window (use-cases.md UC-1 to UC-5): open window, not blocked, else `403
+device-registration.refused` (one answer for every cause); malformed: `400
+device-registration.invalid`; a hardware id on another account: `409
+device.taken`. Success: `{ deviceId, clientId }` and the window closes. The
+same hardware id on the same account replaces key, MAC and TOTP secret; the
+id stays. With no users at all the first registration needs no window and
+makes an admin. The window is the only gate: whoever knows the address
+inside a window can register (a decided trade-off).
+
+**Sign-in**: `private_key_jwt` (RFC 7523, as OpenIddict 7 implements
+rfc7523bis). `POST /connect/token`, form: `grant_type=client_credentials`,
+`client_id=<clientId>`, `client_assertion_type=urn:ietf:params:oauth:client-assertion-type:jwt-bearer`,
+`client_assertion=<JWT>`. The JWT: header `{"alg":"ES256","typ":"client-authentication+jwt"}`;
+claims `iss` = `sub` = clientId, `aud` = the issuer exactly as discovery
+names it (`https://<server>/`), `jti` random, `iat`, `exp` (minutes). The
+access token (minutes, no refresh token) has `sub` = owner, `device_id`.
+`GET /api/identity/device` answers who the device is. Refused for a deleted
+device or a blocked owner. mTLS was rejected: TLS ends at the ingress.
+
+**Open**, for Sync: endpoints (server header of a store, upload with the
+base version, download the newest, report the held version), a stale base
+refused, `bytea` up to ~130 KB, how many versions to keep (a TickerQ prune
+job), the server certificate pinned on the device.
+
+### 4.7 Identity
+
+- Account: user name, e-mail (both unique), role `user`/`admin` (a column,
+  no role tables), `registration_open_until`, `blocked_at`. No password.
+- Web sign-in, both setting Identity's own cookie that `/connect/authorize`
+  turns into a code: `POST /api/identity/sign-in/totp` (e-mail + a code of
+  any of the user's devices, ±1 step, a step once per device, 5 failures
+  lock for 15 min) and passkeys (`/api/identity/sign-in/passkey/options` then
+  `/api/identity/sign-in/passkey`, ASP.NET Core Identity's WebAuthn, relying
+  party = `Identity:PublicOrigin`). Every refusal is `401 sign-in.refused`.
+- Tokens: authorization code + PKCE for the BFF client (`authserver-web`),
+  refresh tokens not rolling and by reference, revocation, end session.
+  Claims `sub`, `name`, `email`, `role`, audience `authserver.api`. Built
+  from the account at every authorize and refresh: a promotion reaches the
+  next renewal; a demotion, a block or a delete revokes the subject's tokens.
+- Keys: the access-token signing key (ES256) is per process (one replica
+  until it is persisted); refresh tokens, codes and cookies are Data
+  Protection, key ring in `identity.data_protection_keys`. TOTP secrets are
+  AES-256-GCM with `Identity:TotpEncryptionKey` (not in the database).
+- Changes that decide who the admins are run under one advisory lock; the
+  last unblocked admin cannot be demoted, blocked or deleted (`409
+  admin.last`).
+- Problem Details `type`: `urn:authserver:problem:<code>`.
 
 ## 5. API contract
 
@@ -246,14 +300,19 @@ database
   `Npgsql` reference without a reason.
 - `dotnet ef` always names `--context` and `--project`; the startup project
   is the Host.
-- Local: PostgreSQL 18 in Docker (`docker-compose.yml`, host port 5433;
-  mind the PostgreSQL 18 volume path: `/var/lib/postgresql`, not
-  `/var/lib/postgresql/data`); migrations at
-  startup or `dotnet ef database update` are fine locally.
-- Production: never migrate at startup. One EF migration bundle per context
-  (framework-dependent, `--target-runtime linux-x64`), one migrations image,
-  run as a Kubernetes `Job` before the rollout (not an `initContainer`).
-  Migrations are expand-then-contract: the old code must run on the new
+- **The backend never migrates, in no environment.** The migrations image
+  (`backend/migrations.Dockerfile`, CI pushes `-migrations`) holds one EF
+  bundle per context (framework-dependent, `--target-runtime linux-x64`) and
+  the idempotent SQL (`/sql/<schema>.sql`); `apply-migrations.sh` applies them
+  in order with `ConnectionStrings__AuthServer`, the backend's own variable,
+  so the cluster Job takes the backend's secret as is. It runs as a
+  Kubernetes `Job` before the rollout (not an `initContainer`), in compose
+  as the `migrations` service the backend waits for
+  (`service_completed_successfully`). Running it again is a no-op.
+- Local without Docker: `dotnet ef database update` (§ commands in
+  CLAUDE.md). PostgreSQL 18 in Docker: host port 5433; the volume path is
+  `/var/lib/postgresql`, not `/var/lib/postgresql/data`.
+- Migrations are expand-then-contract: the old code must run on the new
   schema.
 
 ## 7. Configuration
@@ -267,11 +326,13 @@ a secret store in the cluster).
   "ConnectionStrings": { "AuthServer": "" },
   "Jobs": { "HistoryRetention": { "Succeeded": "2.00:00:00", "Unsuccessful": "30.00:00:00" } },
   "Identity": {
-    "PublicOrigin": "",
+    "PublicOrigin": "",            // the browser's origin: issuer, WebAuthn relying party
+    "ClientId": "authserver-web",
     "AccessTokenLifetime": "00:10:00",
     "RefreshTokenLifetime": "08:00:00",
-    "TokenProtectionKey": "",
-    "ClientId": "authserver-web"
+    "InviteWindow": "1.00:00:00",  // registration window without a device
+    "DeviceWindow": "01:00:00",    // ... with one
+    "TotpEncryptionKey": ""        // secret: 32 bytes base64
   },
   "Sync": {}
 }
@@ -292,8 +353,10 @@ factory, so an `efbundle` (which builds the service provider) never runs them.
   work (firmware storage-encryption.md).
 - Rollback: the server never serves a version below what the device reports;
   the device also refuses it (its highest accepted version is in NVS).
-- Web sign-in: password + passkeys (ASP.NET Core Identity); tokens issued by
-  OpenIddict, validated by JwtBearer.
+- Web sign-in: e-mail + device TOTP, or a passkey; no passwords. Tokens
+  issued by OpenIddict, validated by JwtBearer. Devices: private_key_jwt.
+- Secrets at rest: TOTP secrets encrypted with a key outside the database;
+  device keys are public keys; refresh tokens by reference.
 
 ## 9. Frontend
 
@@ -364,7 +427,8 @@ Auth.js's and the one at the authorization server.
 
 ## 10. Open questions
 
-- Device authentication and pairing (§4.6).
+- Sync's device API (§4.6).
+- Persisting the signing key (more than one replica).
 - How many store versions to keep, and whether the UI may restore an old one.
 - Audit module.
 - Access token refresh in the BFF (§9).

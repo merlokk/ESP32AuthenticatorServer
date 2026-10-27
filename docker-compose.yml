@@ -29,6 +29,19 @@ services:
       timeout: 3s
       retries: 10
 
+  # Applies the migrations and exits; the backend starts only after it succeeded. The backend
+  # never migrates at startup (architecture.md §6). Idempotent: a current database is a no-op.
+  migrations:
+    build:
+      context: backend
+      dockerfile: migrations.Dockerfile
+    image: authserver-migrations:dev
+    environment:
+      ConnectionStrings__AuthServer: Host=postgres;Port=5432;Database=authserver;Username=authserver;Password=${POSTGRES_PASSWORD:-authserver_dev}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
   backend:
     build:
       context: backend
@@ -39,11 +52,14 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ConnectionStrings__AuthServer: Host=postgres;Port=5432;Database=authserver;Username=authserver;Password=${POSTGRES_PASSWORD:-authserver_dev}
+      # The browser's origin: token issuer and WebAuthn relying party.
+      Identity__PublicOrigin: http://localhost:${FRONTEND_PORT:-3100}
+      Identity__TotpEncryptionKey: ${TOTP_ENCRYPTION_KEY:?set TOTP_ENCRYPTION_KEY in .env (openssl rand -base64 32)}
     ports:
       - "${BACKEND_PORT:-5180}:8080"
     depends_on:
-      postgres:
-        condition: service_healthy
+      migrations:
+        condition: service_completed_successfully
     # No healthcheck: the chiseled image has no shell or curl. The frontend's /health and the
     # backend's /health/ready are probed from the host.
 

@@ -1,6 +1,7 @@
 # Checks both halves, then builds the images and pushes them to GHCR:
 #   ghcr.io/merlokk/esp32authenticatorserver-backend
 #   ghcr.io/merlokk/esp32authenticatorserver-frontend
+#   ghcr.io/merlokk/esp32authenticatorserver-migrations  (the Job that runs before the backend rolls)
 # Tags: sha-<short> on every push, latest on main, <x.y.z> and <x.y> on a v<x.y.z> git tag.
 # Pull requests build the images without pushing.
 
@@ -57,7 +58,10 @@ jobs:
       packages: write
     strategy:
       matrix:
-        part: [backend, frontend]
+        include:
+          - { part: backend, context: backend, file: backend/Dockerfile }
+          - { part: frontend, context: frontend, file: frontend/Dockerfile }
+          - { part: migrations, context: backend, file: backend/migrations.Dockerfile }
     steps:
       - uses: actions/checkout@v7
 
@@ -94,11 +98,12 @@ jobs:
 
       - uses: docker/build-push-action@v7
         with:
-          context: ${{ matrix.part }}
+          context: ${{ matrix.context }}
+          file: ${{ matrix.file }}
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          # Only the backend Dockerfile declares these; the frontend ignores them.
+          # Only the backend Dockerfile declares these; the others ignore them.
           build-args: |
             VERSION=${{ steps.version.outputs.version }}
             COMMIT=${{ github.sha }}

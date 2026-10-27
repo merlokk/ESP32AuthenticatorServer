@@ -1,5 +1,23 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
 
+  <PropertyGroup>
+    <!-- Local secrets (Identity:TotpEncryptionKey, the connection string): dotnet user-secrets. -->
+    <UserSecretsId>authserver-host</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="FastEndpoints" />
+    <PackageReference Include="FastEndpoints.Swagger" />
+    <!-- The one bearer scheme every module's endpoints read (architecture.md §4.5). -->
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
+    <!-- Design time only: dotnet ef resolves the contexts through this project. -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
   <ItemGroup>
     <!-- Metrics only: a Prometheus scrape endpoint, no OTLP exporter yet (architecture.md §4.1). -->
     <PackageReference Include="OpenTelemetry.Extensions.Hosting" />
@@ -21,6 +39,8 @@
     <!-- The composition root references every module; a module never references another's
          implementation (architecture.md §3). -->
     <ProjectReference Include="..\AuthServer.Shared\AuthServer.Shared.csproj" />
+    <ProjectReference Include="..\Modules\Identity\AuthServer.Identity\AuthServer.Identity.csproj" />
+    <ProjectReference Include="..\Modules\Identity\AuthServer.Identity.Contracts\AuthServer.Identity.Contracts.csproj" />
   </ItemGroup>
 
 </Project>

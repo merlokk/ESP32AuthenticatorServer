@@ -1,0 +1,93 @@
+using System.Net.Mail;
+using AuthServer.Identity.Contracts;
+using AuthServer.Shared;
+
+namespace AuthServer.Identity.Domain;
+
+internal static class UserRoles
+{
+    public const string Admin = IdentityRoles.Admin;
+
+    public const string User = IdentityRoles.User;
+
+    public static string? Of(string? role) => role?.Trim().ToLowerInvariant() switch
+    {
+        Admin => Admin,
+        User => User,
+        _ => null,
+    };
+}
+
+internal static class AccountFields
+{
+    public const int MaximumUserNameLength = 64;
+
+    public const int MaximumEmailLength = 256;
+
+    public const int MaximumPasskeyNameLength = 64;
+
+    public const int MaximumPasskeys = 10;
+
+    public static Result<string> UserNameOf(string? value)
+    {
+        var name = (value ?? string.Empty).Trim();
+
+        return name.Length is > 0 and <= MaximumUserNameLength && name.All(IsUserNameCharacter)
+            ? name
+            : IdentityErrors.UserNameInvalid;
+    }
+
+    public static Result<string> EmailOf(string? value)
+    {
+        var email = (value ?? string.Empty).Trim();
+
+        // A bare address only: MailAddress also accepts "Name <a@b.c>".
+        return email.Length is > 0 and <= MaximumEmailLength
+            && !email.Any(char.IsControl)
+            && MailAddress.TryCreate(email, out var parsed)
+            && parsed.Address == email
+            && parsed.DisplayName.Length == 0
+                ? email
+                : IdentityErrors.EmailInvalid;
+    }
+
+    /// <summary>The local part of the address, mapped into the user-name alphabet.</summary>
+    public static string DefaultUserNameFor(string email)
+    {
+        var local = email.Split('@')[0];
+        var name = new string([.. local.Select(character => IsUserNameCharacter(character) ? character : '-')]).Trim('-');
+
+        return name.Length == 0 ? "user" : name[..Math.Min(name.Length, MaximumUserNameLength)];
+    }
+
+    public static Result<string> PasskeyNameOf(string? value)
+    {
+        var name = (value ?? string.Empty).Trim();
+
+        return name.Length is > 0 and <= MaximumPasskeyNameLength && !name.Any(char.IsControl)
+            ? name
+            : IdentityErrors.PasskeyNameInvalid;
+    }
+
+    private static bool IsUserNameCharacter(char character) =>
+        char.IsAsciiLetterOrDigit(character) || character is '.' or '_' or '-';
+}
+
+internal static class RegistrationWindow
+{
+    /// <summary>
+    /// A user without a device is being invited (the long window); one with a device is adding
+    /// another (the short one). Opening again extends from now.
+    /// </summary>
+    public static DateTimeOffset Until(DateTimeOffset now, bool hasDevices, TimeSpan inviteWindow, TimeSpan deviceWindow) =>
+        now + (hasDevices ? deviceWindow : inviteWindow);
+
+    public static bool IsOpen(DateTimeOffset? until, DateTimeOffset now) => until is { } end && now < end;
+}
+
+internal static class LastAdminRule
+{
+    /// <summary>A change refused because no active (unblocked) admin would remain.</summary>
+    public static bool Refuses(bool targetIsActiveAdmin, int activeAdmins, bool targetStaysActiveAdmin) =>
+        targetIsActiveAdmin && !targetStaysActiveAdmin && activeAdmins <= 1;
+}

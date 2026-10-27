@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- What other modules and the host may know of Identity: names, never types of its own
+       (architecture.md §3 rule 2). -->
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\AuthServer.Shared\AuthServer.Shared.csproj" />
+  </ItemGroup>
+
+</Project>
