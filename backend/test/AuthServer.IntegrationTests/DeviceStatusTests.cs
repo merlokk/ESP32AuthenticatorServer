@@ -3,12 +3,13 @@ using System.Net.Http.Json;
 
 namespace AuthServer.IntegrationTests;
 
-// UC-38: a device reports its state; the answer names a newer firmware release, if any.
+// UC-38: a device reports its state; the answer names the board's active firmware release (FirmwareTests).
 public sealed class DeviceStatusTests(IdentityFixture fixture) : IClassFixture<IdentityFixture>
 {
     private static object Status(string firmware) => new
     {
         firmware,
+        board = "x4pro",
         mac = "aa:bb:cc:dd:ee:ff",
         wifi = true,
         ble = false,
@@ -19,26 +20,15 @@ public sealed class DeviceStatusTests(IdentityFixture fixture) : IClassFixture<I
     };
 
     [Fact]
-    public async Task A_device_behind_the_release_is_told_its_version()
+    public async Task Without_an_active_release_nothing_is_offered()
     {
         await fixture.ResetAsync();
         var (device, _) = await SyncApi.DeviceAsync(fixture, await fixture.CreateUserAsync("ada@example.com"));
 
         var answer = await (await device.PostAsJsonAsync("/api/device/status", Status("0.5.0-174-g2f84ffa"))).JsonAsync();
 
-        answer["update"]!.GetValue<string>().ShouldBe(TestHost.LatestFirmware);
-        answer["time"]!.GetValue<long>().ShouldBeGreaterThan(1_790_000_000);
-    }
-
-    [Fact]
-    public async Task A_device_on_the_release_or_ahead_is_told_nothing()
-    {
-        await fixture.ResetAsync();
-        var (device, _) = await SyncApi.DeviceAsync(fixture, await fixture.CreateUserAsync("ada@example.com"));
-
-        var answer = await (await device.PostAsJsonAsync("/api/device/status", Status(TestHost.LatestFirmware + "-3-gabc1234"))).JsonAsync();
-
         answer["update"].ShouldBeNull();
+        answer["time"]!.GetValue<long>().ShouldBeGreaterThan(1_790_000_000);
     }
 
     [Fact]

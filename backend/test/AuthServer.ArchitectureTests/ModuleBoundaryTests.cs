@@ -2,6 +2,8 @@ using Assembly = System.Reflection.Assembly;
 using ArchUnitNET.Domain;
 using ArchUnitNET.Loader;
 using ArchUnitNET.xUnit;
+using AuthServer.Firmware;
+using AuthServer.Firmware.Contracts;
 using AuthServer.Identity;
 using AuthServer.Identity.Contracts;
 using AuthServer.Shared;
@@ -15,18 +17,20 @@ public sealed class ModuleBoundaryTests
 {
     private static readonly Assembly Shared = typeof(Result).Assembly;
     private static readonly Assembly IdentityContracts = typeof(IdentityPolicies).Assembly;
+    private static readonly Assembly FirmwareContracts = typeof(IFirmwareOffers).Assembly;
 
     // Each module: its assembly, its registration type and the Contracts it may reference besides Shared.
     private static readonly Dictionary<string, (Assembly Assembly, System.Type Registration, string[] Contracts)> Modules = new()
     {
-        ["Identity"] = (typeof(IdentityModule).Assembly, typeof(IdentityModule), ["AuthServer.Identity.Contracts"]),
+        ["Identity"] = (typeof(IdentityModule).Assembly, typeof(IdentityModule), ["AuthServer.Identity.Contracts", "AuthServer.Firmware.Contracts"]),
         ["Sync"] = (typeof(SyncModule).Assembly, typeof(SyncModule), ["AuthServer.Identity.Contracts"]),
+        ["Firmware"] = (typeof(FirmwareModule).Assembly, typeof(FirmwareModule), ["AuthServer.Identity.Contracts", "AuthServer.Firmware.Contracts"]),
     };
 
     public static TheoryData<string> ModuleNames => [.. Modules.Keys];
 
     private static readonly Architecture Architecture = new ArchLoader()
-        .LoadAssemblies([Shared, IdentityContracts, .. Modules.Values.Select(module => module.Assembly)])
+        .LoadAssemblies([Shared, IdentityContracts, FirmwareContracts, .. Modules.Values.Select(module => module.Assembly)])
         .Build();
 
     [Fact]
@@ -38,6 +42,9 @@ public sealed class ModuleBoundaryTests
     [Fact]
     public void Contracts_reference_only_Shared_and_no_framework_of_the_module()
     {
+        References(FirmwareContracts)
+            .Where(name => !name.StartsWith("System", StringComparison.Ordinal) && name != "netstandard")
+            .ShouldAllBe(name => name == "AuthServer.Shared");
         References(IdentityContracts)
             .Where(name => !name.StartsWith("System", StringComparison.Ordinal) && name != "netstandard")
             .ShouldAllBe(name => name == "AuthServer.Shared");

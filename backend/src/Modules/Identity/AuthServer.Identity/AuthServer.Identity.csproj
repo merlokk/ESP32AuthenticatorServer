@@ -28,6 +28,8 @@
   <ItemGroup>
     <ProjectReference Include="..\..\..\AuthServer.Shared\AuthServer.Shared.csproj" />
     <ProjectReference Include="..\AuthServer.Identity.Contracts\AuthServer.Identity.Contracts.csproj" />
+    <!-- The status answer names the board's active release. -->
+    <ProjectReference Include="..\..\Firmware\AuthServer.Firmware.Contracts\AuthServer.Firmware.Contracts.csproj" />
   </ItemGroup>
 
 </Project>

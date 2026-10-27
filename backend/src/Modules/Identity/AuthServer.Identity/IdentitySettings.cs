@@ -27,11 +27,5 @@ internal sealed class IdentitySettings
     /// <summary>32 random bytes, base64: AES-GCM key of the stored TOTP secrets.</summary>
     public string TotpEncryptionKey { get; set; } = string.Empty;
 
-    /// <summary>
-    /// The newest firmware release (x.y.z) offered to devices that report an older one; empty
-    /// offers none.
-    /// </summary>
-    public string LatestFirmware { get; set; } = string.Empty;
-
     public string TrimmedPublicOrigin => PublicOrigin.TrimEnd('/');
 }

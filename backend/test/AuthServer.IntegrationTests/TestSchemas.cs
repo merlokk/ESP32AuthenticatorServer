@@ -1,3 +1,4 @@
+using AuthServer.Firmware.Infrastructure.Persistence;
 using AuthServer.Identity.Infrastructure.Persistence;
 using AuthServer.Sync.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Identity;
@@ -29,5 +30,10 @@ internal static class TestSchemas
             .UseNpgsql(connectionString, npgsql => npgsql.MigrationsHistoryTable("__EFMigrationsHistory", SyncDbContext.Schema))
             .Options);
         await sync.Database.MigrateAsync();
+
+        await using var firmware = new FirmwareDbContext(new DbContextOptionsBuilder<FirmwareDbContext>()
+            .UseNpgsql(connectionString, npgsql => npgsql.MigrationsHistoryTable("__EFMigrationsHistory", FirmwareDbContext.Schema))
+            .Options);
+        await firmware.Database.MigrateAsync();
     }
 }

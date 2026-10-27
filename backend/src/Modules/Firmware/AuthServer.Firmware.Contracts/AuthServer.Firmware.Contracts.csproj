@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- What other modules may know of Firmware: the board's active release, no types of its own
+       beyond that (architecture.md §3 rule 2). -->
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\AuthServer.Shared\AuthServer.Shared.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -72,6 +72,7 @@ public sealed class IdentityFixture : IAsyncLifetime
                            identity.openiddict_authorizations;
             delete from identity.openiddict_applications where client_id <> '{TestHost.ClientId}';
             truncate table sync.store_versions, sync.stores;
+            truncate table firmware.releases;
             """);
     }
 

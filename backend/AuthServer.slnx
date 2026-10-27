@@ -10,8 +10,13 @@
   <Folder Name="/src/Modules/Sync/">
     <Project Path="src/Modules/Sync/AuthServer.Sync/AuthServer.Sync.csproj" />
   </Folder>
+  <Folder Name="/src/Modules/Firmware/">
+    <Project Path="src/Modules/Firmware/AuthServer.Firmware/AuthServer.Firmware.csproj" />
+    <Project Path="src/Modules/Firmware/AuthServer.Firmware.Contracts/AuthServer.Firmware.Contracts.csproj" />
+  </Folder>
   <Folder Name="/test/">
     <Project Path="test/AuthServer.ArchitectureTests/AuthServer.ArchitectureTests.csproj" />
+    <Project Path="test/AuthServer.Firmware.Tests/AuthServer.Firmware.Tests.csproj" />
     <Project Path="test/AuthServer.Host.Tests/AuthServer.Host.Tests.csproj" />
     <Project Path="test/AuthServer.Identity.Tests/AuthServer.Identity.Tests.csproj" />
     <Project Path="test/AuthServer.IntegrationTests/AuthServer.IntegrationTests.csproj" />

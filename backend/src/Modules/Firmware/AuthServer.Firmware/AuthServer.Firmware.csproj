@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="FastEndpoints" />
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
+  </ItemGroup>
+
+  <ItemGroup Label="Everything here is internal (architecture.md §3 rule 2)">
+    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleToAttribute">
+      <_Parameter1>AuthServer.Firmware.Tests</_Parameter1>
+    </AssemblyAttribute>
+    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleToAttribute">
+      <_Parameter1>AuthServer.IntegrationTests</_Parameter1>
+    </AssemblyAttribute>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\AuthServer.Shared\AuthServer.Shared.csproj" />
+    <!-- Policy and claim names only: who calls comes in the token. -->
+    <ProjectReference Include="..\..\Identity\AuthServer.Identity.Contracts\AuthServer.Identity.Contracts.csproj" />
+    <!-- Implements IFirmwareOffers for Identity's status call. -->
+    <ProjectReference Include="..\AuthServer.Firmware.Contracts\AuthServer.Firmware.Contracts.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -15,7 +15,7 @@ if [ -z "${ConnectionStrings__AuthServer:-}" ]; then
 fi
 
 # A bundle builds the host's service provider; nothing in it needs more than the connection.
-SCHEMAS="identity sync"
+SCHEMAS="identity sync firmware"
 
 for schema in ${SCHEMAS}; do
     echo "--- ${schema} ---"

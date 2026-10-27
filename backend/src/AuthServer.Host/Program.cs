@@ -1,3 +1,4 @@
+using AuthServer.Firmware;
 using AuthServer.Host.Startup;
 using AuthServer.Identity;
 using AuthServer.Sync;
@@ -16,7 +17,8 @@ var builder = WebApplication.CreateBuilder(args);
 // endpoints, its DbContext and its own registrations through AddXxxModule(), never a global default.
 // TickerQ comes with the first job.
 
-builder.Services.AddFastEndpoints(options => options.Assemblies = [typeof(IdentityModule).Assembly, typeof(SyncModule).Assembly]);
+builder.Services.AddFastEndpoints(options => options.Assemblies =
+    [typeof(IdentityModule).Assembly, typeof(SyncModule).Assembly, typeof(FirmwareModule).Assembly]);
 
 builder.Services.SwaggerDocument(options =>
 {
@@ -37,6 +39,7 @@ builder.Services.AddBearerAuthentication(builder.Configuration);
 
 builder.Services.AddIdentityModule(builder.Configuration);
 builder.Services.AddSyncModule(builder.Configuration);
+builder.Services.AddFirmwareModule(builder.Configuration);
 
 // Behind an ingress the public host and scheme arrive in these headers. Pod addresses are dynamic,
 // so no fixed proxy list; the backend is reachable only inside the cluster.

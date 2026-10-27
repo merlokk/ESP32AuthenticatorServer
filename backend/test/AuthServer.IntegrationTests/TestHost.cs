@@ -14,7 +14,7 @@ internal static class TestHost
 
     public const int SyncMaxFileBytes = 4096;
 
-    public const string LatestFirmware = "0.6.0";
+    public const int FirmwareMaxImageBytes = 16 * 1024;
 
     public static readonly string RedirectUri = $"{PublicOrigin}/auth/callback/authserver";
 
@@ -35,7 +35,7 @@ internal static class TestHost
         builder.UseSetting("Identity:AccessTokenLifetime", "00:00:02");
         builder.UseSetting("Identity:RefreshTokenLifetime", "01:00:00");
 
-        builder.UseSetting("Identity:LatestFirmware", LatestFirmware);
+        builder.UseSetting("Firmware:MaxImageBytes", FirmwareMaxImageBytes.ToString(System.Globalization.CultureInfo.InvariantCulture));
 
         // Few enough that pruning is testable.
         builder.UseSetting("Sync:VersionsToKeep", SyncVersionsToKeep.ToString(System.Globalization.CultureInfo.InvariantCulture));
