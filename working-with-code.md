@@ -121,6 +121,9 @@ is why every one is expand-then-contract.
   own error URL instead of throwing when discovery fails.
 - **A route handler is not a page**: reach `/connect/**` by
   `window.location`, not the router or a server-action `redirect()`.
+- **Server actions and rollouts**: an action's id changes with every build;
+  a tab opened before a rollout calls one that is gone ("Failed to find
+  Server Action"). Sign-in and sign-out are routes for that reason.
 - **Generated client**: `npm run api:generate` needs the backend's Swagger
   (`BACKEND_URL`); generated code is committed and never edited.
 - **Walk the whole path before a release** that touches sign-in: register a

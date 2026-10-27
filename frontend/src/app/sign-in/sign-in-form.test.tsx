@@ -2,9 +2,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { REFUSED, SignInForm, UNREACHABLE } from "./sign-in-form";
 
-const continueSignIn = vi.fn<(returnUrl: string) => Promise<string>>();
-vi.mock("./actions", () => ({ continueSignIn: (url: string) => continueSignIn(url) }));
-
 const fetchMock = vi.fn<typeof fetch>();
 const assign = vi.fn();
 
@@ -35,7 +32,6 @@ function fill(email: string, code: string) {
 describe("SignInForm", () => {
   it("posts the e-mail and code, then follows the flow", async () => {
     fetchMock.mockResolvedValue(Response.json({ signedIn: true }));
-    continueSignIn.mockResolvedValue("/connect/authorize?client_id=a");
     render(<SignInForm returnUrl="/connect/authorize?client_id=a" />);
 
     fill(" ada@example.com ", "123456");
@@ -44,7 +40,6 @@ describe("SignInForm", () => {
     const [url, init] = fetchMock.mock.calls[0];
     expect(url).toBe("/api/identity/sign-in/totp");
     expect(JSON.parse(init?.body as string)).toEqual({ email: "ada@example.com", code: "123456" });
-    expect(continueSignIn).toHaveBeenCalledWith("/connect/authorize?client_id=a");
   });
 
   it("checks the fields before sending anything", async () => {

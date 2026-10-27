@@ -26,3 +26,12 @@ export function safeReturnUrl(value: string | undefined | null): string {
 export function isAuthorizeUrl(returnUrl: string): boolean {
   return returnUrl === "/connect/authorize" || returnUrl.startsWith("/connect/authorize?");
 }
+
+/**
+ * The route that starts the code flow and ends on the return URL. A route, not a server action:
+ * its address survives a deployment, an action's id does not (a page loaded before the rollout
+ * would call an action the new server no longer has).
+ */
+export function signInStartUrl(returnUrl: string): string {
+  return `/sign-in/start?returnUrl=${encodeURIComponent(safeReturnUrl(returnUrl))}`;
+}

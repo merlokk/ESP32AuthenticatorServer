@@ -15,7 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { zodResolver } from "@/lib/zod-resolver";
 import { getAssertion, passkeysSupported } from "@/lib/webauthn";
-import { continueSignIn } from "./actions";
+import { isAuthorizeUrl, signInStartUrl } from "@/lib/return-url";
 
 // One message for every refusal (the backend sends one answer for every cause), and a different
 // one when the backend could not be reached: that is not a wrong code.
@@ -53,12 +53,9 @@ export function SignInForm({ returnUrl }: { returnUrl: string }) {
   }
 
   // The authorization server's cookie is set: on to the code flow, by a full navigation.
-  async function proceed() {
-    try {
-      window.location.assign(await continueSignIn(returnUrl));
-    } catch (error) {
-      fail(error);
-    }
+  // The authorization server's cookie is set: back into its flow, by a full navigation.
+  function proceed() {
+    window.location.assign(isAuthorizeUrl(returnUrl) ? returnUrl : signInStartUrl(returnUrl));
   }
 
   async function signInWithPasskey() {
@@ -87,7 +84,7 @@ export function SignInForm({ returnUrl }: { returnUrl: string }) {
       fail(error);
       return;
     }
-    await proceed();
+    proceed();
   }
 
   const submit = form.handleSubmit(async (values) => {
@@ -99,7 +96,7 @@ export function SignInForm({ returnUrl }: { returnUrl: string }) {
       form.resetField("code");
       return;
     }
-    await proceed();
+    proceed();
   });
 
   const { errors } = form.formState;

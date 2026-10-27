@@ -37,7 +37,7 @@ export default function SignInPage({ searchParams }: PageProps<"/sign-in">) {
 }
 
 async function SignIn({ searchParams }: Pick<PageProps<"/sign-in">, "searchParams">) {
-  const { returnUrl } = await searchParams;
+  const { returnUrl, unavailable } = await searchParams;
   const target = safeReturnUrl(typeof returnUrl === "string" ? returnUrl : undefined);
 
   // The form only when the authorization server asked for it (its own cookie is gone, which this
@@ -52,5 +52,5 @@ async function SignIn({ searchParams }: Pick<PageProps<"/sign-in">, "searchParam
   if (session && !session.error) {
     redirect(target);
   }
-  return <StartSignIn returnUrl={target} />;
+  return <StartSignIn returnUrl={target} unavailable={unavailable !== undefined} />;
 }

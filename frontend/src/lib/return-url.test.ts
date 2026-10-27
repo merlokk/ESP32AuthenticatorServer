@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DEFAULT_RETURN_URL, isAuthorizeUrl, safeReturnUrl } from "./return-url";
+import { DEFAULT_RETURN_URL, isAuthorizeUrl, safeReturnUrl, signInStartUrl } from "./return-url";
 
 describe("safeReturnUrl", () => {
   it("keeps a path on this origin with its query", () => {
@@ -36,5 +36,14 @@ describe("isAuthorizeUrl", () => {
   it("refuses anything else", () => {
     expect(isAuthorizeUrl("/connect/authorizex")).toBe(false);
     expect(isAuthorizeUrl("/")).toBe(false);
+  });
+});
+
+describe("signInStartUrl", () => {
+  it("carries a safe return URL", () => {
+    expect(signInStartUrl("/devices?x=1")).toBe("/sign-in/start?returnUrl=%2Fdevices%3Fx%3D1");
+    expect(signInStartUrl("https://evil.example/")).toBe(
+      `/sign-in/start?returnUrl=${encodeURIComponent(DEFAULT_RETURN_URL)}`,
+    );
   });
 });

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { LogOut, UserRound } from "lucide-react";
 import { useGetProfile } from "@/api/generated/identity/identity";
@@ -17,14 +17,14 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
 import { gravatarUrl, initials } from "@/lib/gravatar";
-import { signOutEverywhere } from "../sign-in/actions";
 
 // The user's avatar (Gravatar) and their menu. From GET /api/identity/me, not the session: a new
 // user name shows at once.
 export function UserMenu() {
   const { data: profile } = useGetProfile();
   const avatar = useGravatar(profile?.email);
-  const [signingOut, startSignOut] = useTransition();
+  // POST /sign-out is a route, not a server action: it survives a deployment.
+  const signOut = useRef<HTMLFormElement>(null);
 
   if (!profile) return <Skeleton className="size-8 rounded-full" />;
 
@@ -51,17 +51,13 @@ export function UserMenu() {
               Profile
             </Link>
           </DropdownMenuItem>
-          <DropdownMenuItem
-            disabled={signingOut}
-            onSelect={() =>
-              startSignOut(async () => window.location.assign(await signOutEverywhere()))
-            }
-          >
+          <DropdownMenuItem onSelect={() => signOut.current?.requestSubmit()}>
             <LogOut aria-hidden />
             Sign out
           </DropdownMenuItem>
         </DropdownMenuGroup>
       </DropdownMenuContent>
+      <form ref={signOut} method="post" action="/sign-out" hidden />
     </DropdownMenu>
   );
 }

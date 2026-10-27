@@ -22,12 +22,12 @@ test("an invalid code is caught before anything is sent", async ({ page }) => {
 
 test("home page offers to sign in", async ({ page }) => {
   await page.goto("/");
-  await expect(page.getByRole("button", { name: "Sign in" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Sign in" })).toBeVisible();
 });
 
 // No backend here: the code flow cannot start, and the page says so instead of a form.
 test("the app without a session goes to sign in", async ({ page }) => {
   await page.goto("/dashboard");
-  await page.waitForURL(/\/sign-in\?returnUrl=%2Fdashboard$/);
-  await expect(page.getByRole("button", { name: "Try again" })).toBeVisible({ timeout: 15_000 });
+  await page.waitForURL(/\/sign-in\?unavailable=1&returnUrl=%2Fdashboard$/);
+  await expect(page.getByRole("link", { name: "Try again" })).toBeVisible();
 });

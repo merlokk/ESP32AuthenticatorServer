@@ -3,6 +3,7 @@
 import { MutationCache, QueryCache, QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState, type ReactNode } from "react";
 import { ApiError } from "@/api/fetch";
+import { signInStartUrl } from "@/lib/return-url";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
 // A 401 means the session's access token is gone (expired: there is no refresh yet). Signing in
@@ -11,9 +12,7 @@ function signInAgainOn401(error: unknown) {
   if (error instanceof ApiError && error.status === 401) {
     const here = `${window.location.pathname}${window.location.search}`;
     // A full load, not the router: it drops every cached query of the old session.
-    const signIn = new URL("/sign-in", window.location.origin);
-    signIn.searchParams.set("returnUrl", here);
-    window.location.assign(signIn);
+    window.location.assign(new URL(signInStartUrl(here), window.location.origin));
   }
 }
 

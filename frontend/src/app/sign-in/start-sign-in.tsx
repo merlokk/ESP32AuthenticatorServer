@@ -1,30 +1,28 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { continueSignIn } from "./actions";
+import { signInStartUrl } from "@/lib/return-url";
 import { UNREACHABLE } from "./sign-in-form";
 
 /**
- * Starts the code flow at once. While the authorization server's cookie lives (8 h) the browser
- * comes straight back signed in; otherwise the server sends it here again, with ?returnUrl=
- * /connect/authorize..., and the page shows the form.
+ * /sign-in reached without the authorization server asking: on to /sign-in/start, which begins the
+ * code flow. With `unavailable` the flow could not start (backend down): say so, offer a retry.
  */
-export function StartSignIn({ returnUrl }: { returnUrl: string }) {
-  const [failed, setFailed] = useState(false);
-  const [attempt, setAttempt] = useState(0);
+export function StartSignIn({
+  returnUrl,
+  unavailable,
+}: {
+  returnUrl: string;
+  unavailable: boolean;
+}) {
+  const href = signInStartUrl(returnUrl);
 
   useEffect(() => {
-    let current = true;
-    continueSignIn(returnUrl)
-      .then((url) => current && window.location.assign(url))
-      .catch(() => current && setFailed(true));
-    return () => {
-      current = false;
-    };
-  }, [returnUrl, attempt]);
+    if (!unavailable) window.location.replace(href);
+  }, [href, unavailable]);
 
-  if (!failed) {
+  if (!unavailable) {
     return (
       <p role="status" className="text-sm text-muted-foreground">
         Signing you in…
@@ -36,14 +34,8 @@ export function StartSignIn({ returnUrl }: { returnUrl: string }) {
       <p role="alert" className="text-sm text-destructive">
         {UNREACHABLE}
       </p>
-      <Button
-        variant="outline"
-        onClick={() => {
-          setFailed(false);
-          setAttempt((value) => value + 1);
-        }}
-      >
-        Try again
+      <Button variant="outline" asChild>
+        <a href={href}>Try again</a>
       </Button>
     </div>
   );
