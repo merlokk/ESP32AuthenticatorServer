@@ -7,7 +7,7 @@ import { useGetMyDevices } from "@/api/generated/identity/identity";
 import type { StoreRow } from "@/api/generated/model";
 import { useGetStores } from "@/api/generated/sync/sync";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   cipherLabel,
@@ -65,9 +65,6 @@ function StoreCard({ store, serials }: { store: StoreRow; serials: ReadonlyMap<s
     <Card>
       <CardHeader>
         <CardTitle>{storeKindLabel(store.kind)}</CardTitle>
-        <CardDescription className="font-mono text-xs">
-          store {store.storeId} · seed {store.seedId}
-        </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
         <dl className="grid gap-x-8 gap-y-3 text-sm sm:grid-cols-2">
@@ -88,6 +85,12 @@ function StoreCard({ store, serials }: { store: StoreRow; serials: ReadonlyMap<s
           </Field>
           <Field label="Key id">
             <span className="font-mono text-xs">{store.keyId}</span>
+          </Field>
+          <Field label="Store id">
+            <span className="font-mono text-xs">{store.storeId}</span>
+          </Field>
+          <Field label="Seed id">
+            <span className="font-mono text-xs">{store.seedId}</span>
           </Field>
         </dl>
         <div>
