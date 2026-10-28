@@ -194,6 +194,8 @@ public sealed class FirmwareTests(IdentityFixture fixture) : IClassFixture<Ident
 
         await (await device.GetAsync($"/api/device/firmware/{Guid.NewGuid()}/image"))
             .ShouldBeProblemAsync(HttpStatusCode.NotFound, "firmware.release-not-found");
+        await (await device.GetAsync("/api/device/firmware/not-a-guid/image"))
+            .ShouldBeProblemAsync(HttpStatusCode.NotFound, "firmware.release-not-found");
     }
 
     [Fact]

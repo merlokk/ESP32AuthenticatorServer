@@ -242,6 +242,24 @@ public sealed class SyncTests(IdentityFixture fixture) : IClassFixture<IdentityF
             .ShouldBeProblemAsync(HttpStatusCode.BadRequest, "sync.request-invalid");
     }
 
+    // A malformed ?above= is refused, never read as absent: absent serves the head (rollback).
+    [Theory]
+    [InlineData("abc")]
+    [InlineData("-1")]
+    [InlineData("4294967296")]
+    [InlineData("")]
+    public async Task A_download_names_its_version_as_a_number(string above)
+    {
+        await fixture.ResetAsync();
+        var (device, _) = await SyncApi.DeviceAsync(fixture, await fixture.CreateUserAsync("ada@example.com"));
+        await SyncApi.UploadAsync(device, Vault with { Version = 3 });
+
+        await (await device.GetAsync($"/api/device/stores/files/a1a2a3a4a5a6a7a8/c1c2c3c4/2?above={above}"))
+            .ShouldBeProblemAsync(HttpStatusCode.BadRequest, "sync.request-invalid");
+        await (await device.GetAsync("/api/device/stores/files/a1a2a3a4a5a6a7a8/c1c2c3c4/x"))
+            .ShouldBeProblemAsync(HttpStatusCode.BadRequest, "sync.request-invalid");
+    }
+
     [Fact]
     public async Task Of_two_devices_racing_with_one_counter_exactly_one_wins()
     {

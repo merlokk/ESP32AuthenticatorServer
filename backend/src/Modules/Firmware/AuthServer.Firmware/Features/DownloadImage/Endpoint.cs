@@ -40,12 +40,15 @@ internal sealed class Endpoint(FirmwareDbContext context) : EndpointWithoutReque
 
     public override async Task HandleAsync(CancellationToken cancellationToken)
     {
-        var id = Route<Guid>("id");
+        // Not a GUID names no release: 404 like a deleted one, not FastEndpoints' validation answer.
+        var id = Route<Guid>("id", isRequired: false);
 
-        var release = await context.Releases
-            .Where(entity => entity.Id == id)
-            .Select(entity => new { entity.Size, entity.Sha256 })
-            .SingleOrDefaultAsync(cancellationToken);
+        var release = id == Guid.Empty
+            ? null
+            : await context.Releases
+                .Where(entity => entity.Id == id)
+                .Select(entity => new { entity.Size, entity.Sha256 })
+                .SingleOrDefaultAsync(cancellationToken);
 
         if (release is null)
         {

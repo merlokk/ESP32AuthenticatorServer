@@ -1,3 +1,4 @@
+using System.Globalization;
 using AuthServer.Identity.Contracts;
 using AuthServer.Sync.Domain;
 using AuthServer.Sync.Infrastructure.Http;
@@ -31,9 +32,18 @@ internal sealed class Endpoint(SyncDbContext context) : EndpointWithoutRequest
     {
         var key = StoreKey.Create(Route<string>("storeId"), Route<string>("seedId"), Route<int>("kind", isRequired: false));
 
-        if (!key.IsSuccess)
+        // Parsed here, not by Query<uint?>: that reads a malformed value as absent, and absent serves the head.
+        var named = HttpContext.Request.Query.TryGetValue("above", out var text);
+        uint? above = null;
+
+        if (named && uint.TryParse(text.ToString(), NumberStyles.None, CultureInfo.InvariantCulture, out var held))
         {
-            await SyncProblem.SendAsync(HttpContext, key.Error!, StatusCodes.Status400BadRequest, cancellationToken);
+            above = held;
+        }
+
+        if (!key.IsSuccess || (named && above is null))
+        {
+            await SyncProblem.SendAsync(HttpContext, SyncErrors.RequestInvalid, StatusCodes.Status400BadRequest, cancellationToken);
             return;
         }
 
@@ -50,8 +60,6 @@ internal sealed class Endpoint(SyncDbContext context) : EndpointWithoutRequest
             await SyncProblem.SendAsync(HttpContext, SyncErrors.StoreNotFound, StatusCodes.Status404NotFound, cancellationToken);
             return;
         }
-
-        uint? above = Query<uint?>("above", isRequired: false);
 
         if (!UploadRule.Serves((uint)head.Version, above))
         {

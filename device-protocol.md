@@ -16,6 +16,9 @@ it: [architecture.md](architecture.md) §4.6.
 - A refusal is Problem Details (`application/problem+json`): branch on `type`
   (`urn:authserver:problem:<code>`), never on `title`. Codes are listed with
   each call and in [Errors](#errors).
+- A response may come without `Content-Length` (`Transfer-Encoding:
+  chunked`): the BFF passes the body through as a stream. Read to the end; the
+  size of a piece is in `Content-Range`, of a store in its header.
 - `Authorization: Bearer <token>`: the device's access token (Sign-in). Calls
   without it are marked *anonymous*.
 
@@ -252,6 +255,7 @@ device has:
    |---|---|
    | 200 | the store file as uploaded (`application/octet-stream`) |
    | 204 | none: the server has nothing above `above` |
+   | 400 | `sync.request-invalid`: a bad id or kind, `above` not a uint32 |
    | 404 | `sync.store-not-found` |
 
    The server never serves a version at or below `above` (rollback). The
@@ -295,7 +299,7 @@ active one (a person choosing a version on the device).
 | 200 | no `Range`: the whole image |
 | 206 | the piece |
 | 416 | the range starts past the end (`Content-Range: bytes */size`) |
-| 404 | `firmware.release-not-found`: deleted meanwhile; report status again |
+| 404 | `firmware.release-not-found`: deleted meanwhile (or not an id); report status again |
 
 The device still runs its own image check as the bytes stream (chip, project,
 segments, checksum): the server checked the same on upload.
