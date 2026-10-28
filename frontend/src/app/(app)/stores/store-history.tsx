@@ -65,8 +65,7 @@ export function StoreHistory({
               <span className="font-mono text-xs">{version.keyId}</span>
               {version.keyId !== store.keyId && (
                 <Badge
-                  variant="secondary"
-                  className="ml-2"
+                  className="ml-2 bg-amber-100 text-amber-900 dark:bg-amber-500/20 dark:text-amber-300"
                   title="The PIN or the seed phrase changed"
                 >
                   other key
