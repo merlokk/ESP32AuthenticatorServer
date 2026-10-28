@@ -30,7 +30,7 @@ export function StoresList() {
     [devices.data],
   );
 
-  if (stores.isPending) return <Skeleton className="h-48 w-full max-w-4xl" />;
+  if (stores.isPending) return <Skeleton className="h-48 w-full" />;
   if (stores.isError) {
     return (
       <p role="alert" className="text-sm text-destructive">
@@ -40,7 +40,7 @@ export function StoresList() {
   }
   if (stores.data.stores.length === 0) {
     return (
-      <Card className="max-w-4xl">
+      <Card>
         <CardContent className="flex items-center gap-3 text-sm text-muted-foreground">
           <Database className="size-5" aria-hidden />
           No store synced yet: a device uploads its stores on its next sync.
@@ -50,7 +50,7 @@ export function StoresList() {
   }
 
   return (
-    <div className="flex max-w-4xl flex-col gap-6">
+    <div className="flex flex-col gap-6">
       {stores.data.stores.map((store) => (
         <StoreCard key={store.id} store={store} serials={serials} />
       ))}
