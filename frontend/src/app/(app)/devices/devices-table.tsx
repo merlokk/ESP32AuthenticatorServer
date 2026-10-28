@@ -1,8 +1,10 @@
 "use client";
 
+import { RefreshCw } from "lucide-react";
 import { errorMessage } from "@/api/errors";
 import { useGetMyDevices } from "@/api/generated/identity/identity";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { statusSummary } from "@/lib/device-status";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -18,7 +20,7 @@ const dateTimeFormat = new Intl.DateTimeFormat("en", { dateStyle: "medium", time
 
 export function DevicesTable() {
   // Fresh on every visit and polled: a device's status report or a registration changes the rows.
-  const { data, error, isError, isPending } = useGetMyDevices({
+  const { data, error, isError, isFetching, isPending, refetch } = useGetMyDevices({
     query: { staleTime: 0, refetchInterval: 30_000 },
   });
 
@@ -26,6 +28,12 @@ export function DevicesTable() {
     <Card>
       <CardHeader>
         <CardTitle>Your devices</CardTitle>
+        <CardAction>
+          <Button variant="outline" size="sm" disabled={isFetching} onClick={() => void refetch()}>
+            <RefreshCw className={isFetching ? "animate-spin" : undefined} aria-hidden />
+            Refresh
+          </Button>
+        </CardAction>
       </CardHeader>
       <CardContent>
         {isPending ? (
