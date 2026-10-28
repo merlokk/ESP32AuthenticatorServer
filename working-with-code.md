@@ -86,7 +86,9 @@ After a rollout:
 
 - `GET /api/version` answers the new version and commit (Admin → System
   shows the frontend's too);
-- `/health/ready` is 200;
+- the new pods are `1/1 Running` (the backend's readiness probe is
+  `/health/ready`) and `/health` answers `Healthy`; publicly `/health/ready`
+  is the frontend's 404, since only `/register` is routed to the backend;
 - the changed page or call works in a browser (sign in, then the feature).
 
 Logs and pods: `kubectl`, context `merlokk`, namespace `authserver`. The API
