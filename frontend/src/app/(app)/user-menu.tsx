@@ -2,7 +2,8 @@
 
 import { useRef } from "react";
 import Link from "next/link";
-import { LogOut, UserRound } from "lucide-react";
+import { LogOut, Monitor, Moon, Sun, SunMoon, UserRound } from "lucide-react";
+import { useTheme } from "next-themes";
 import { useGetProfile } from "@/api/generated/identity/identity";
 import { Button } from "@/components/ui/button";
 import {
@@ -11,7 +12,12 @@ import {
   DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -23,6 +29,7 @@ export function UserMenu() {
   const { data: profile } = useGetProfile();
   // POST /sign-out is a route, not a server action: it survives a deployment.
   const signOut = useRef<HTMLFormElement>(null);
+  const { theme, setTheme } = useTheme();
 
   if (!profile) return <Skeleton className="size-8 rounded-full" />;
 
@@ -46,6 +53,28 @@ export function UserMenu() {
               Profile
             </Link>
           </DropdownMenuItem>
+          <DropdownMenuSub>
+            <DropdownMenuSubTrigger>
+              <SunMoon aria-hidden />
+              Theme
+            </DropdownMenuSubTrigger>
+            <DropdownMenuSubContent>
+              <DropdownMenuRadioGroup value={theme} onValueChange={setTheme}>
+                <DropdownMenuRadioItem value="light">
+                  <Sun aria-hidden />
+                  Light
+                </DropdownMenuRadioItem>
+                <DropdownMenuRadioItem value="dark">
+                  <Moon aria-hidden />
+                  Dark
+                </DropdownMenuRadioItem>
+                <DropdownMenuRadioItem value="system">
+                  <Monitor aria-hidden />
+                  System
+                </DropdownMenuRadioItem>
+              </DropdownMenuRadioGroup>
+            </DropdownMenuSubContent>
+          </DropdownMenuSub>
           <DropdownMenuItem onSelect={() => signOut.current?.requestSubmit()}>
             <LogOut aria-hidden />
             Sign out
