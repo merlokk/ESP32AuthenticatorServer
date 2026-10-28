@@ -1,11 +1,10 @@
-import { getAccessToken } from "@/auth";
-import { forward } from "@/lib/backend";
+import { forwardWithSession } from "@/lib/session";
 
-// /api/** forwarded to the backend as data: the access token from the session attached, the
-// browser's cookies kept out, path, query, body and status untouched (architecture.md §9).
+// /api/** forwarded to the backend as data: the access token from the session attached (renewed
+// when it has expired or the backend refuses it), the browser's cookies kept out, path, query,
+// body and status untouched (architecture.md §9).
 async function handler(request: Request): Promise<Response> {
-  return forward(request, {
-    accessToken: await getAccessToken(request),
+  return forwardWithSession(request, {
     forwardCookies: false,
     redirect: "follow",
   });

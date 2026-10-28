@@ -24,8 +24,9 @@ npm run api:generate           # OpenAPI -> src/api/generated (needs the backend
 | `src/app/(app)`                                                | the signed-in app: shell, dashboard, devices, stores, profile, admin (users, firmware, system) |
 | `src/api/generated`                                            | Orval output (committed, never edited)                                               |
 | `src/app/health`                                               | the frontend's own probe                                                             |
-| `src/auth.ts`                                                  | Auth.js config, `getAccessToken()`                                                   |
+| `src/auth.ts`                                                  | Auth.js config                                                                       |
 | `src/lib/backend.ts`                                           | the forwarding proxy (server-only)                                                   |
+| `src/lib/session.ts`                                           | the session's access token: renewed, the cookie rewritten (server-only)             |
 | `src/api/fetch.ts`                                             | the mutator every generated call goes through                                        |
 | `src/lib/zod-resolver.ts`                                      | react-hook-form ↔ zod                                                                |
 | `src/components/ui`                                            | shadcn/ui components (`npx shadcn add <name>`)                                       |

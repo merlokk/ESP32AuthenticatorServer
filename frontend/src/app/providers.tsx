@@ -6,8 +6,9 @@ import { ApiError } from "@/api/fetch";
 import { signInStartUrl } from "@/lib/return-url";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
-// A 401 means the session's access token is gone (expired: there is no refresh yet). Signing in
-// again is silent while the authorization server's cookie lives, so go round once more.
+// A 401 means the BFF could not renew the session's access token either (the refresh token expired
+// or was revoked, the account blocked). Signing in again is silent while the authorization
+// server's cookie lives, so go round once more.
 function signInAgainOn401(error: unknown) {
   if (error instanceof ApiError && error.status === 401) {
     const here = `${window.location.pathname}${window.location.search}`;

@@ -1,7 +1,5 @@
 import "server-only";
 import NextAuth from "next-auth";
-import { getToken } from "next-auth/jwt";
-import { publicUrl } from "@/lib/backend";
 
 // Auth.js as the BFF's session (architecture.md §9). The backend's OpenIddict issues every token;
 // the session cookie is only an encrypted container for them, and nothing here mints a token.
@@ -9,10 +7,8 @@ import { publicUrl } from "@/lib/backend";
 // basePath is /auth rather than the default /api/auth: /api/** belongs to the backend, forwarded
 // one-for-one, and Auth.js inside it would shadow part of that space.
 //
-// Not here yet, deliberately: refreshing the access token. Where the refreshed cookie is written
-// (the JWT callback cannot persist it from a server component) and how a rotated refresh token
-// behaves under concurrent requests are settled against the real Identity module, not guessed.
-// Until then an expired access token is reported as session.error and the user signs in again.
+// Renewal is not in the JWT callback: a server component cannot write the cookie it would change.
+// The routes that use the token renew it and rewrite the cookie themselves (src/lib/session.ts).
 
 export const AUTH_BASE_PATH = "/auth";
 
@@ -47,27 +43,15 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     },
     async session({ session, token }) {
       // Only what the UI may know. The session reaches the browser (GET /auth/session), so no
-      // token and nothing derived from one goes in here.
-      if (token.expiresAt && Date.now() / 1000 >= token.expiresAt) {
+      // token and nothing derived from one goes in here. An expired access token with a refresh
+      // token is still a session: the next /api call renews it.
+      if (!token.refreshToken && token.expiresAt && Date.now() / 1000 >= token.expiresAt) {
         session.error = "AccessTokenExpired";
       }
       return session;
     },
   },
 });
-
-/**
- * The backend access token from the request's session cookie, or undefined. Server-side only:
- * the BFF attaches it upstream and the browser never sees it.
- */
-export async function getAccessToken(request: Request): Promise<string | undefined> {
-  // The cookie's name depends on the scheme the browser used (__Secure- prefix over https).
-  const secureCookie = publicUrl(request).protocol === "https:";
-  const token = await getToken({ req: request, secret: process.env.AUTH_SECRET, secureCookie });
-  if (!token?.accessToken) return undefined;
-  if (token.expiresAt && Date.now() / 1000 >= token.expiresAt) return undefined;
-  return token.accessToken;
-}
 
 declare module "next-auth" {
   interface Session {

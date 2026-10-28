@@ -465,16 +465,21 @@ Auth.js's and the one at the authorization server.
   cipher, size, PBKDF2 iterations, key id) and its kept versions, a key id
   unlike the newest marked (a PIN or seed change).
   Without a session the layout sends the browser to `/sign-in/start`; an API
-  401 (token expired) does the same from the query cache. `/` goes to `/dashboard` when signed in.
+  401 (renewal refused too) does the same from the query cache. `/` goes to `/dashboard` when signed in.
 - `basePath: "/auth"`, not `/api/auth`: `/api/**` is the backend's.
 - A public client: PKCE, no secret; scopes `openid profile offline_access`.
 - The session object (`GET /auth/session`, readable by the browser) carries
-  no token; the BFF reads the token with `getAccessToken(request)`.
-- **Token refresh: not built yet**, deliberately. Where the refreshed cookie
-  is written and how a rotated refresh token behaves under concurrent
-  requests are settled against the real Identity module. Until then an
-  expired access token shows as `session.error` and the user signs in
-  again.
+  no token; the BFF reads it from the cookie (`src/lib/session.ts`).
+- **Token refresh** in the BFF, not in Auth.js's JWT callback (a server
+  component cannot write the cookie). `/api/**` renews the access token with
+  the refresh token when it has expired, and once more, the request sent
+  again, when the backend answers 401 before then (the signing key is per
+  process: a restart refuses every earlier token); the session cookie is
+  rewritten on the same response, chunked as Auth.js does. Not rolling, so
+  concurrent renewals all succeed. `/sign-in/start` renews instead of
+  trusting the session, else a refused token loops between the page and it.
+  A session with a refresh token never shows `session.error`; a 401 that
+  survives renewal sends the browser to sign in.
 
 ## 10. Open questions
 
