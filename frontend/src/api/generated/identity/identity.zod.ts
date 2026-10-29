@@ -104,6 +104,27 @@ export const RemovePasskeyParams = zod.object({
 export const RemovePasskeyResponse = zod.void()
 
 /**
+ * Its token lapses within minutes; the user and their stores stay. device.not-found: not this user's.
+ * @summary Remove a user's device (admin); it signs in no more.
+ */
+export const RemoveUserDeviceParams = zod.object({
+  "userId": zod.string(),
+  "id": zod.string()
+})
+
+export const RemoveUserDeviceResponse = zod.void()
+
+/**
+ * Its token lapses within minutes; its stores stay. It may register again through a window. The last one may go too: a passkey still signs in.
+ * @summary Remove one of your devices; it signs in no more.
+ */
+export const RemoveMyDeviceParams = zod.object({
+  "id": zod.string()
+})
+
+export const RemoveMyDeviceResponse = zod.void()
+
+/**
  * Opens or extends the window from now for ?hours= (1 to 24). Without it: InviteWindow while the user has no device, else DeviceWindow.
  * @summary Let a device register to this user for a while (admin).
  */

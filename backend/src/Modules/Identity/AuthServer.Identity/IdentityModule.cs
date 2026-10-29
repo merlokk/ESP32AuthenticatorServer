@@ -43,6 +43,7 @@ public static class IdentityModule
         // Built on first use, so a bad key fails the start (IdentityStartup), not an efbundle.
         services.AddSingleton(_ => new TotpSecretProtector(settings.TotpEncryptionKey));
         services.AddScoped<DeviceClients>();
+        services.AddScoped<DeviceRemoval>();
         services.AddScoped<AccountChanges>();
 
         services.AddSingleton<SigningKey>();

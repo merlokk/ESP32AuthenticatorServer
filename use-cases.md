@@ -5,7 +5,7 @@ its tests pass. Mechanics: [architecture.md](architecture.md) §4.6, §4.7.
 
 Tests (`backend/test/AuthServer.IntegrationTests/` unless noted): UC-1, 4, 5, 7
 `DeviceRegistrationTests` (+ `Identity.Tests/Domain/DeviceRegistrationTests`);
-UC-2, 3 `RegistrationWindowTests`; UC-6 `DeviceSignInTests`; UC-9
+UC-2, 3 `RegistrationWindowTests`; UC-6 `DeviceSignInTests`; UC-8 `DeviceRemovalTests`; UC-9
 `TotpSignInTests` (+ `Identity.Tests/Domain/TotpTests`); UC-10, 12, 13
 `PasskeyTests`; UC-11 `AuthorizationCodeFlowTests`, `RenewalTests`,
 `EphemeralSigningKeyTests`; UC-14 to 19 `UserAdministrationTests`; UC-20, 21
@@ -53,7 +53,10 @@ closes it (null).
   owner. Refused for a removed device or a blocked owner.
 - [x] **UC-7 List my devices.** Id, serial, MAC, registered and last
   seen instants. Never the key or the TOTP secret.
-- [ ] UC-8 Edit and remove devices (user and admin). Later.
+- [x] **UC-8 Remove a device.** A user removes one of theirs, an admin any
+  user's: it gets no token any more (one it holds lapses within
+  `AccessTokenLifetime`), its stores stay, its serial may register again.
+  Editing a device: later.
 
 ### Web sign-in
 

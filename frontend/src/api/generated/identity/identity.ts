@@ -762,6 +762,156 @@ export const useRemovePasskey = <TError = void,
       > => {
       return useMutation(getRemovePasskeyMutationOptions(options), queryClient);
     }
+    export const getRemoveUserDeviceUrl = (userId: string,
+    id: string,) => {
+
+
+
+
+  return `/api/identity/users/${userId}/devices/${id}`
+}
+
+/**
+ * Its token lapses within minutes; the user and their stores stay. device.not-found: not this user's.
+ * @summary Remove a user's device (admin); it signs in no more.
+ */
+export const removeUserDevice = async (userId: string,
+    id: string, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getRemoveUserDeviceUrl(userId,id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getRemoveUserDeviceMutationKey = () => ['removeUserDevice'] as const;
+
+export const getRemoveUserDeviceMutationOptions = <TError = void,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof removeUserDevice>>, TError,RemoveUserDeviceMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof removeUserDevice>>, TError,RemoveUserDeviceMutationVariables, TContext> => {
+
+const mutationKey = getRemoveUserDeviceMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof removeUserDevice>>, RemoveUserDeviceMutationVariables> = (props) => {
+          const {userId,id} = props ?? {};
+
+          return  removeUserDevice(userId,id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RemoveUserDeviceMutationResult = NonNullable<Awaited<ReturnType<typeof removeUserDevice>>>
+
+    export type RemoveUserDeviceMutationError = void
+    export type RemoveUserDeviceMutationVariables = {userId: string;id: string}
+
+    /**
+ * @summary Remove a user's device (admin); it signs in no more.
+ */
+export const useRemoveUserDevice = <TError = void,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof removeUserDevice>>, TError,RemoveUserDeviceMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof removeUserDevice>>,
+        TError,
+        RemoveUserDeviceMutationVariables,
+        TContext
+      > => {
+      return useMutation(getRemoveUserDeviceMutationOptions(options), queryClient);
+    }
+    export const getRemoveMyDeviceUrl = (id: string,) => {
+
+
+
+
+  return `/api/identity/me/devices/${id}`
+}
+
+/**
+ * Its token lapses within minutes; its stores stay. It may register again through a window. The last one may go too: a passkey still signs in.
+ * @summary Remove one of your devices; it signs in no more.
+ */
+export const removeMyDevice = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getRemoveMyDeviceUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getRemoveMyDeviceMutationKey = () => ['removeMyDevice'] as const;
+
+export const getRemoveMyDeviceMutationOptions = <TError = void,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof removeMyDevice>>, TError,RemoveMyDeviceMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof removeMyDevice>>, TError,RemoveMyDeviceMutationVariables, TContext> => {
+
+const mutationKey = getRemoveMyDeviceMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof removeMyDevice>>, RemoveMyDeviceMutationVariables> = (props) => {
+          const {id} = props ?? {};
+
+          return  removeMyDevice(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RemoveMyDeviceMutationResult = NonNullable<Awaited<ReturnType<typeof removeMyDevice>>>
+
+    export type RemoveMyDeviceMutationError = void
+    export type RemoveMyDeviceMutationVariables = {id: string}
+
+    /**
+ * @summary Remove one of your devices; it signs in no more.
+ */
+export const useRemoveMyDevice = <TError = void,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof removeMyDevice>>, TError,RemoveMyDeviceMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof removeMyDevice>>,
+        TError,
+        RemoveMyDeviceMutationVariables,
+        TContext
+      > => {
+      return useMutation(getRemoveMyDeviceMutationOptions(options), queryClient);
+    }
     export const getOpenRegistrationWindowUrl = (id: string,
     params?: OpenRegistrationWindowParams,) => {
   const normalizedParams = new URLSearchParams();
