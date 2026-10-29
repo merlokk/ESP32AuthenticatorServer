@@ -42,6 +42,47 @@ export const GetReleasesResponse = zod.object({
   "sha256": zod.string(),
   "active": zod.boolean(),
   "uploadedAt": zod.iso.datetime({"offset":true})
+})),
+  "gitHubRepository": zod.string().nullish()
+})
+
+/**
+ * assetId from GET /api/firmware/github. Checked as an upload is, and against GitHub's size and SHA-256; kept inactive. firmware.asset-not-found, firmware.import-off, firmware.github-unavailable (502).
+ * @summary Import a GitHub release image for a board (admin).
+ */
+export const ImportReleaseBody = zod.object({
+  "board": zod.string().nullish(),
+  "assetId": zod.int()
+})
+
+export const ImportReleaseResponse = zod.object({
+  "id": zod.string(),
+  "board": zod.string(),
+  "version": zod.string(),
+  "built": zod.string(),
+  "idf": zod.string(),
+  "size": zod.int(),
+  "sha256": zod.string(),
+  "active": zod.boolean(),
+  "uploadedAt": zod.iso.datetime({"offset":true})
+})
+
+/**
+ * An asset's id goes to POST /api/firmware/releases/import. firmware.import-off: no repository configured; firmware.github-unavailable (502): GitHub did not answer.
+ * @summary The newest releases of Firmware:GitHubRepository with their .bin files (admin).
+ */
+export const GetGitHubReleasesResponse = zod.object({
+  "repository": zod.string(),
+  "releases": zod.array(zod.object({
+  "tag": zod.string(),
+  "name": zod.string(),
+  "prerelease": zod.boolean(),
+  "publishedAt": zod.iso.datetime({"offset":true}).nullish(),
+  "assets": zod.array(zod.object({
+  "id": zod.int(),
+  "name": zod.string(),
+  "size": zod.int()
+}))
 }))
 })
 

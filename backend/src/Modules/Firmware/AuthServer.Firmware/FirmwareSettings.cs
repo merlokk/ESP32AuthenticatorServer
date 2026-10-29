@@ -10,4 +10,7 @@ internal sealed class FirmwareSettings
 
     /// <summary>The largest image accepted: the OTA slot (app0/app1, 0x7E0000 on the X4 Pro layout).</summary>
     public int MaxImageBytes { get; set; } = 0x7E0000;
+
+    /// <summary>"owner/name" of the GitHub repository whose release images an admin imports; empty: no import.</summary>
+    public string GitHubRepository { get; set; } = string.Empty;
 }

@@ -24,6 +24,9 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  GitHubReleasesResponse,
+  ImportReleaseRequest,
+  ImportReleaseResponse,
   ReleasesResponse,
   UploadReleaseResponse
 } from '../model';
@@ -228,6 +231,195 @@ export function useGetReleases<TData = Awaited<ReturnType<typeof getReleases>>, 
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
   const queryOptions = getGetReleasesQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+export const getImportReleaseUrl = () => {
+
+
+
+
+  return `/api/firmware/releases/import`
+}
+
+/**
+ * assetId from GET /api/firmware/github. Checked as an upload is, and against GitHub's size and SHA-256; kept inactive. firmware.asset-not-found, firmware.import-off, firmware.github-unavailable (502).
+ * @summary Import a GitHub release image for a board (admin).
+ */
+export const importRelease = async (importReleaseRequest: ImportReleaseRequest, options?: Parameters<typeof customFetch>[1]): Promise<ImportReleaseResponse> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<ImportReleaseResponse>(getImportReleaseUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(importReleaseRequest)
+  }
+);}
+
+
+
+
+
+export const getImportReleaseMutationKey = () => ['importRelease'] as const;
+
+export const getImportReleaseMutationOptions = <TError = void,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof importRelease>>, TError,ImportReleaseMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof importRelease>>, TError,ImportReleaseMutationVariables, TContext> => {
+
+const mutationKey = getImportReleaseMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof importRelease>>, ImportReleaseMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  importRelease(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ImportReleaseMutationResult = NonNullable<Awaited<ReturnType<typeof importRelease>>>
+    export type ImportReleaseMutationBody = ImportReleaseRequest
+    export type ImportReleaseMutationError = void
+    export type ImportReleaseMutationVariables = {data: ImportReleaseRequest}
+
+    /**
+ * @summary Import a GitHub release image for a board (admin).
+ */
+export const useImportRelease = <TError = void,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof importRelease>>, TError,ImportReleaseMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof importRelease>>,
+        TError,
+        ImportReleaseMutationVariables,
+        TContext
+      > => {
+      return useMutation(getImportReleaseMutationOptions(options), queryClient);
+    }
+    export const getGetGitHubReleasesUrl = () => {
+
+
+
+
+  return `/api/firmware/github`
+}
+
+/**
+ * An asset's id goes to POST /api/firmware/releases/import. firmware.import-off: no repository configured; firmware.github-unavailable (502): GitHub did not answer.
+ * @summary The newest releases of Firmware:GitHubRepository with their .bin files (admin).
+ */
+export const getGitHubReleases = async ( options?: Parameters<typeof customFetch>[1]): Promise<GitHubReleasesResponse> => {
+
+  return customFetch<GitHubReleasesResponse>(getGetGitHubReleasesUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetGitHubReleasesQueryKey = () => {
+    return [
+    `/api/firmware/github`
+    ] as const;
+    }
+
+
+export const getGetGitHubReleasesQueryOptions = <TData = Awaited<ReturnType<typeof getGitHubReleases>>, TError = void>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getGitHubReleases>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetGitHubReleasesQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getGitHubReleases>>> = ({ signal }) => getGitHubReleases({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getGitHubReleases>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetGitHubReleasesQueryResult = NonNullable<Awaited<ReturnType<typeof getGitHubReleases>>>
+export type GetGitHubReleasesQueryError = void
+
+
+export function useGetGitHubReleases<TData = Awaited<ReturnType<typeof getGitHubReleases>>, TError = void>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getGitHubReleases>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getGitHubReleases>>,
+          TError,
+          Awaited<ReturnType<typeof getGitHubReleases>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetGitHubReleases<TData = Awaited<ReturnType<typeof getGitHubReleases>>, TError = void>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getGitHubReleases>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getGitHubReleases>>,
+          TError,
+          Awaited<ReturnType<typeof getGitHubReleases>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetGitHubReleases<TData = Awaited<ReturnType<typeof getGitHubReleases>>, TError = void>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getGitHubReleases>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary The newest releases of Firmware:GitHubRepository with their .bin files (admin).
+ */
+
+export function useGetGitHubReleases<TData = Awaited<ReturnType<typeof getGitHubReleases>>, TError = void>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getGitHubReleases>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetGitHubReleasesQueryOptions(options)
 
   const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 

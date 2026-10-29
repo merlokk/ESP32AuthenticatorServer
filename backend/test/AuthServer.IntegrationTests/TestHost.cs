@@ -1,4 +1,7 @@
+using AuthServer.Firmware.Infrastructure.GitHub;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.TestHost;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace AuthServer.IntegrationTests;
 
@@ -36,6 +39,10 @@ internal static class TestHost
         builder.UseSetting("Identity:RefreshTokenLifetime", "01:00:00");
 
         builder.UseSetting("Firmware:MaxImageBytes", FirmwareMaxImageBytes.ToString(System.Globalization.CultureInfo.InvariantCulture));
+        builder.UseSetting("Firmware:GitHubRepository", FakeGitHub.Repository);
+        builder.ConfigureTestServices(services => services
+            .AddHttpClient<GitHubReleases>()
+            .ConfigurePrimaryHttpMessageHandler(() => FakeGitHub.Instance));
 
         // Few enough that pruning is testable.
         builder.UseSetting("Sync:VersionsToKeep", SyncVersionsToKeep.ToString(System.Globalization.CultureInfo.InvariantCulture));

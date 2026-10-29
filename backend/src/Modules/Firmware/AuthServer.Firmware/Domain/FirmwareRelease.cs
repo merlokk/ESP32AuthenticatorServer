@@ -1,3 +1,6 @@
+using System.Security.Cryptography;
+using AuthServer.Shared;
+
 namespace AuthServer.Firmware.Domain;
 
 /// <summary>
@@ -33,4 +36,29 @@ internal sealed class FirmwareRelease
     public Guid UploadedBy { get; init; }
 
     public byte[] Content { get; init; } = [];
+
+    /// <summary>An inactive release of <paramref name="file"/>, if it is an image of this firmware (<see cref="AppImage"/>).</summary>
+    public static Result<FirmwareRelease> Of(string board, byte[] file, string project, DateTimeOffset uploadedAt, Guid uploadedBy)
+    {
+        var image = AppImage.Parse(file, project);
+
+        if (!image.IsSuccess)
+        {
+            return image.Error;
+        }
+
+        return new FirmwareRelease
+        {
+            Id = Guid.CreateVersion7(),
+            Board = board,
+            Version = image.Value.Version,
+            Built = image.Value.Built,
+            Idf = image.Value.Idf,
+            Size = file.Length,
+            Sha256 = Convert.ToHexStringLower(SHA256.HashData(file)),
+            UploadedAt = uploadedAt,
+            UploadedBy = uploadedBy,
+            Content = file,
+        };
+    }
 }

@@ -238,8 +238,11 @@ Here: how the server does it.
   is Firmware's: an upload is checked as the firmware's OTA check does (ESP32-S3
   app image, segments, checksum, SHA-256, `Firmware:Project`) and named by its
   `esp_app_desc_t.version`; unique (board, version); one active per board
-  (a partial unique index). The image download serves one `Range` per request
-  (206; 416 past the end), read with `substring` from an uncompressed column.
+  (a partial unique index). An admin can import a release image from
+  `Firmware:GitHubRepository` (anonymous GitHub API, checked against its
+  size and digest, then as an upload). The image download serves one
+  `Range` per request (206; 416 past the end), read with `substring` from an
+  uncompressed column.
 - Stores (`/api/device/stores...`) are Sync's: a store is (owner, store id,
   seed id, kind); the counter orders copies. An upload is one short
   transaction: upsert the store row, lock it (`for update`), compare the
@@ -349,7 +352,8 @@ a secret store in the cluster).
   },
   "Firmware": {
     "Project": "esp32-authenticator", // esp_app_desc_t.project_name; another is refused
-    "MaxImageBytes": 8257536       // the OTA slot (0x7E0000)
+    "MaxImageBytes": 8257536,      // the OTA slot (0x7E0000)
+    "GitHubRepository": "merlokk/ESP32Authenticator" // owner/name to import release images from; "" none
   }
 }
 ```

@@ -16,4 +16,10 @@ internal static class FirmwareErrors
     public static readonly Error ReleaseExists = new("firmware.release-exists", "This board already has a release of that version.");
 
     public static readonly Error ReleaseNotFound = new("firmware.release-not-found", "There is no such release.");
+
+    public static readonly Error ImportOff = new("firmware.import-off", "No GitHub repository is configured to import from.");
+
+    public static readonly Error GitHubUnavailable = new("firmware.github-unavailable", "GitHub did not answer as expected. Try again later.");
+
+    public static readonly Error AssetNotFound = new("firmware.asset-not-found", "The repository's releases have no such file.");
 }

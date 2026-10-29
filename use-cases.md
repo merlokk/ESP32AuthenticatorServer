@@ -12,7 +12,7 @@ UC-2, 3 `RegistrationWindowTests`; UC-6 `DeviceSignInTests`; UC-9
 `ProfileTests`; UC-22 `ConfigurationTests`; UC-30 to 35, 39 `SyncTests` (+
 `Sync.Tests/Domain`); UC-38 `DeviceStatusTests` (+
 `Identity.Tests/Domain/FirmwareVersionTests`); UC-40
-`Host.Tests/PingEndpointTests`; UC-41 to 44 `FirmwareTests` (+
+`Host.Tests/PingEndpointTests`; UC-41 to 45 `FirmwareTests` (+
 `Firmware.Tests/Domain`).
 
 ## Identity
@@ -147,3 +147,7 @@ The wire protocol: [device-protocol.md](device-protocol.md).
   newest upload first, the active one marked.
 - [x] **UC-44 OTA download.** A device fetches an image whole or one `Range`
   at a time (206, `Content-Range`; 416 past the end); ETag is the SHA-256.
+- [x] **UC-45 GitHub import.** An admin lists the releases of
+  `Firmware:GitHubRepository` (their `.bin` files) and imports one for a
+  board: the server fetches it, checks GitHub's size and SHA-256, then keeps
+  it as an upload (UC-41). No repository: no import.

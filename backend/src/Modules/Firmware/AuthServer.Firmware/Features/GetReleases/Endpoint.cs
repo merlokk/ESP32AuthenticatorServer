@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AuthServer.Firmware.Features.GetReleases;
 
-internal sealed class Endpoint(FirmwareDbContext context) : EndpointWithoutRequest<ReleasesResponse>
+internal sealed class Endpoint(FirmwareDbContext context, FirmwareSettings settings) : EndpointWithoutRequest<ReleasesResponse>
 {
     public override void Configure()
     {
@@ -40,12 +40,16 @@ internal sealed class Endpoint(FirmwareDbContext context) : EndpointWithoutReque
             .ToListAsync(cancellationToken);
 
         await Send.OkAsync(
-            new ReleasesResponse([.. Boards.All.Select(board => new BoardRow(board.Id, board.Name))], releases),
+            new ReleasesResponse(
+                [.. Boards.All.Select(board => new BoardRow(board.Id, board.Name))],
+                releases,
+                settings.GitHubRepository.Length > 0 ? settings.GitHubRepository : null),
             cancellationToken);
     }
 }
 
-internal sealed record ReleasesResponse(IReadOnlyList<BoardRow> Boards, IReadOnlyList<ReleaseRow> Releases);
+/// <param name="GitHubRepository">"owner/name" an admin imports release images from; null: no import.</param>
+internal sealed record ReleasesResponse(IReadOnlyList<BoardRow> Boards, IReadOnlyList<ReleaseRow> Releases, string? GitHubRepository);
 
 internal sealed record BoardRow(string Id, string Name);
 

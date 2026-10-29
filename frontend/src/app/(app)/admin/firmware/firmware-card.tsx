@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { CircleCheck, CircleOff, Trash2, Upload } from "lucide-react";
+import { CircleCheck, CircleOff, Download, Trash2, Upload } from "lucide-react";
 import { errorMessage } from "@/api/errors";
 import { customFetch } from "@/api/fetch";
 import {
@@ -30,6 +30,7 @@ import {
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { formatBytes } from "@/lib/stores";
 import { ConfirmDialog } from "../users/confirm-dialog";
+import { GitHubImportDialog } from "./github-import";
 
 const dateTimeFormat = new Intl.DateTimeFormat("en", { dateStyle: "medium", timeStyle: "short" });
 
@@ -64,7 +65,7 @@ export function FirmwareCard() {
 
   return (
     <>
-      <UploadCard boards={data.boards} onDone={refresh} />
+      <UploadCard boards={data.boards} gitHubRepository={data.gitHubRepository} onDone={refresh} />
       {data.boards.map((board) => {
         const releases = data.releases.filter((release) => release.board === board.id);
         const active = releases.find((release) => release.active);
@@ -141,7 +142,9 @@ export function FirmwareCard() {
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                onClick={() => setOpen({ kind: "activate", release, current: active })}
+                                onClick={() =>
+                                  setOpen({ kind: "activate", release, current: active })
+                                }
                               >
                                 <CircleCheck aria-hidden />
                                 Activate
@@ -219,15 +222,18 @@ export function FirmwareCard() {
 
 function UploadCard({
   boards,
+  gitHubRepository,
   onDone,
 }: {
   boards: { id: string; name: string }[];
+  gitHubRepository?: string | null;
   onDone: () => Promise<unknown>;
 }) {
   const [board, setBoard] = useState(boards[0]?.id ?? "");
   const [file, setFile] = useState<File>();
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<{ ok: boolean; text: string }>();
+  const [importing, setImporting] = useState(false);
   const input = useRef<HTMLInputElement>(null);
 
   async function submit(event: React.FormEvent) {
@@ -289,6 +295,39 @@ function UploadCard({
             {busy ? "Uploading…" : "Upload"}
           </Button>
         </form>
+        {gitHubRepository && (
+          <div className="mt-3 flex flex-wrap items-center gap-3">
+            <Button
+              variant="outline"
+              disabled={busy}
+              onClick={() => {
+                setResult(undefined);
+                setImporting(true);
+              }}
+            >
+              <Download aria-hidden />
+              Import from GitHub
+            </Button>
+            <span className="text-sm text-muted-foreground">
+              A release image of <span className="font-mono">{gitHubRepository}</span> for the board
+              above.
+            </span>
+          </div>
+        )}
+        {importing && gitHubRepository && (
+          <GitHubImportDialog
+            repository={gitHubRepository}
+            board={boards.find((option) => option.id === board) ?? { id: board, name: board }}
+            onImported={async (release) => {
+              setResult({
+                ok: true,
+                text: `Imported ${release.version} for ${release.board}, inactive.`,
+              });
+              await onDone();
+            }}
+            onClose={() => setImporting(false)}
+          />
+        )}
         {result && (
           <p
             role={result.ok ? "status" : "alert"}

@@ -1,4 +1,3 @@
-using System.Security.Cryptography;
 using AuthServer.Firmware.Domain;
 using AuthServer.Firmware.Infrastructure.Http;
 using AuthServer.Firmware.Infrastructure.Persistence;
@@ -42,7 +41,7 @@ internal sealed class Endpoint(FirmwareDbContext context, FirmwareSettings setti
             return;
         }
 
-        var file = await ReadBodyAsync(cancellationToken);
+        var file = await BoundedBody.ReadAsync(HttpContext.Request.Body, HttpContext.Request.ContentLength, settings.MaxImageBytes, cancellationToken);
 
         if (file is null)
         {
@@ -50,29 +49,15 @@ internal sealed class Endpoint(FirmwareDbContext context, FirmwareSettings setti
             return;
         }
 
-        var image = AppImage.Parse(file, settings.Project);
+        var release = FirmwareRelease.Of(board!, file, settings.Project, clock.GetUtcNow(), FirmwareProblem.Caller(User));
 
-        if (!image.IsSuccess)
+        if (!release.IsSuccess)
         {
-            await FirmwareProblem.SendAsync(HttpContext, image.Error, StatusCodes.Status400BadRequest, cancellationToken);
+            await FirmwareProblem.SendAsync(HttpContext, release.Error, StatusCodes.Status400BadRequest, cancellationToken);
             return;
         }
 
-        var release = new FirmwareRelease
-        {
-            Id = Guid.CreateVersion7(),
-            Board = board!,
-            Version = image.Value.Version,
-            Built = image.Value.Built,
-            Idf = image.Value.Idf,
-            Size = file.Length,
-            Sha256 = Convert.ToHexStringLower(SHA256.HashData(file)),
-            UploadedAt = clock.GetUtcNow(),
-            UploadedBy = FirmwareProblem.Caller(User),
-            Content = file,
-        };
-
-        context.Releases.Add(release);
+        context.Releases.Add(release.Value);
 
         try
         {
@@ -84,35 +69,11 @@ internal sealed class Endpoint(FirmwareDbContext context, FirmwareSettings setti
             return;
         }
 
+        var kept = release.Value;
+
         await Send.OkAsync(
-            new UploadReleaseResponse(
-                release.Id, release.Board, release.Version, release.Built, release.Idf, release.Size, release.Sha256, release.Active, release.UploadedAt),
+            new UploadReleaseResponse(kept.Id, kept.Board, kept.Version, kept.Built, kept.Idf, kept.Size, kept.Sha256, kept.Active, kept.UploadedAt),
             cancellationToken);
-    }
-
-    /// <summary>The body, or null past the limit (read no further than one chunk over it).</summary>
-    private async Task<byte[]?> ReadBodyAsync(CancellationToken cancellationToken)
-    {
-        if (HttpContext.Request.ContentLength > settings.MaxImageBytes)
-        {
-            return null;
-        }
-
-        using var buffer = new MemoryStream();
-        var chunk = new byte[64 * 1024];
-        int read;
-
-        while ((read = await HttpContext.Request.Body.ReadAsync(chunk, cancellationToken)) > 0)
-        {
-            buffer.Write(chunk, 0, read);
-
-            if (buffer.Length > settings.MaxImageBytes)
-            {
-                return null;
-            }
-        }
-
-        return buffer.ToArray();
     }
 }
 

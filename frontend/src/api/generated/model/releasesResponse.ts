@@ -10,4 +10,6 @@ import type { ReleaseRow } from './releaseRow';
 export interface ReleasesResponse {
   boards: BoardRow[];
   releases: ReleaseRow[];
+  /** @nullable */
+  gitHubRepository?: string | null;
 }

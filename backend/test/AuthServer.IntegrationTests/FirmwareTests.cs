@@ -4,6 +4,7 @@ using System.Net.Http.Json;
 using System.Security.Cryptography;
 using System.Text.Json.Nodes;
 using AuthServer.Firmware.Tests;
+using Microsoft.AspNetCore.Hosting;
 
 namespace AuthServer.IntegrationTests;
 
@@ -89,6 +90,89 @@ public sealed class FirmwareTests(IdentityFixture fixture) : IClassFixture<Ident
 
         (await user.GetAsync("/api/firmware/releases")).StatusCode.ShouldBe(HttpStatusCode.Forbidden);
         (await UploadAsync(user, "x4pro", new FirmwareImage().Bytes())).StatusCode.ShouldBe(HttpStatusCode.Forbidden);
+        (await user.GetAsync("/api/firmware/github")).StatusCode.ShouldBe(HttpStatusCode.Forbidden);
+        (await ImportAsync(user, "x4pro", 6)).StatusCode.ShouldBe(HttpStatusCode.Forbidden);
+    }
+
+    private static Task<HttpResponseMessage> ImportAsync(HttpClient admin, string board, long assetId) =>
+        admin.PostAsJsonAsync("/api/firmware/releases/import", new { board, assetId });
+
+    [Fact]
+    public async Task An_admin_lists_the_github_releases_with_their_images()
+    {
+        await fixture.ResetAsync();
+        var admin = await AdminAsync();
+        FakeGitHub.Instance.Serve(
+            new FakeGitHub.Release("0.7.0", [new FakeGitHub.Asset(8, "esp32-authenticator-0.7.0.bin", new FirmwareImage { Version = "0.7.0" }.Bytes())], Prerelease: true),
+            new FakeGitHub.Release("0.6.0", [
+                new FakeGitHub.Asset(6, "esp32-authenticator-0.6.0.bin", new FirmwareImage { Version = "0.6.0" }.Bytes()),
+                new FakeGitHub.Asset(7, "esp32-authenticator-0.6.0.bin.sha256", "f7bb"u8.ToArray()),
+            ]));
+
+        var listed = await (await admin.GetAsync("/api/firmware/github")).JsonAsync();
+
+        listed["repository"]!.GetValue<string>().ShouldBe(FakeGitHub.Repository);
+        var releases = listed["releases"]!.AsArray();
+        releases.Select(release => release!["tag"]!.GetValue<string>()).ShouldBe(["0.7.0", "0.6.0"]);
+        releases[0]!["prerelease"]!.GetValue<bool>().ShouldBeTrue();
+        var asset = releases[1]!["assets"]!.AsArray().ShouldHaveSingleItem()!;
+        asset["id"]!.GetValue<long>().ShouldBe(6);
+        asset["name"]!.GetValue<string>().ShouldBe("esp32-authenticator-0.6.0.bin");
+        (await (await admin.GetAsync("/api/firmware/releases")).JsonAsync())["gitHubRepository"]!.GetValue<string>()
+            .ShouldBe(FakeGitHub.Repository);
+    }
+
+    [Fact]
+    public async Task An_admin_imports_a_github_image_as_an_upload()
+    {
+        await fixture.ResetAsync();
+        var admin = await AdminAsync();
+        var image = new FirmwareImage { Version = "0.6.0" }.Bytes();
+        FakeGitHub.Instance.Serve(new FakeGitHub.Release("0.6.0", [new FakeGitHub.Asset(6, "esp32-authenticator-0.6.0.bin", image)]));
+
+        var imported = await (await ImportAsync(admin, "x4pro", 6)).JsonAsync();
+
+        imported["version"]!.GetValue<string>().ShouldBe("0.6.0");
+        imported["board"]!.GetValue<string>().ShouldBe("x4pro");
+        imported["active"]!.GetValue<bool>().ShouldBeFalse();
+        imported["sha256"]!.GetValue<string>().ShouldBe(Convert.ToHexStringLower(SHA256.HashData(image)));
+        await (await ImportAsync(admin, "x4pro", 6)).ShouldBeProblemAsync(HttpStatusCode.Conflict, "firmware.release-exists");
+    }
+
+    [Fact]
+    public async Task An_import_is_checked_as_an_upload()
+    {
+        await fixture.ResetAsync();
+        var admin = await AdminAsync();
+        var image = new FirmwareImage().Bytes();
+        FakeGitHub.Instance.Serve(new FakeGitHub.Release("0.6.0", [
+            new FakeGitHub.Asset(1, "broken.bin", new FirmwareImage { BreakChecksum = true }.Bytes()),
+            new FakeGitHub.Asset(2, "tampered.bin", image, Digest: "sha256:" + new string('0', 64)),
+            new FakeGitHub.Asset(3, "large.bin", new FirmwareImage { SegmentLengths = [TestHost.FirmwareMaxImageBytes] }.Bytes()),
+            new FakeGitHub.Asset(4, "fine.bin", image),
+        ]));
+
+        await (await ImportAsync(admin, "x4pro", 1)).ShouldBeProblemAsync(HttpStatusCode.BadRequest, "firmware.image-invalid");
+        await (await ImportAsync(admin, "x4pro", 2)).ShouldBeProblemAsync(HttpStatusCode.BadRequest, "firmware.image-invalid");
+        await (await ImportAsync(admin, "x4pro", 3)).ShouldBeProblemAsync(HttpStatusCode.RequestEntityTooLarge, "firmware.image-too-large");
+        await (await ImportAsync(admin, "x4pro", 99)).ShouldBeProblemAsync(HttpStatusCode.NotFound, "firmware.asset-not-found");
+        await (await ImportAsync(admin, "toaster", 4)).ShouldBeProblemAsync(HttpStatusCode.BadRequest, "firmware.board-unknown");
+
+        FakeGitHub.Instance.Down = true;
+        await (await ImportAsync(admin, "x4pro", 4)).ShouldBeProblemAsync(HttpStatusCode.BadGateway, "firmware.github-unavailable");
+        await (await admin.GetAsync("/api/firmware/github")).ShouldBeProblemAsync(HttpStatusCode.BadGateway, "firmware.github-unavailable");
+    }
+
+    [Fact]
+    public async Task Without_a_repository_there_is_no_import()
+    {
+        await fixture.ResetAsync();
+        await using var application = fixture.CreateSecondApplication(builder => builder.UseSetting("Firmware:GitHubRepository", ""));
+        var admin = await AccessTokens.BearerAsync(application, await fixture.CreateUserAsync("admin@example.com", "admin"));
+
+        (await (await admin.GetAsync("/api/firmware/releases")).JsonAsync())["gitHubRepository"].ShouldBeNull();
+        await (await admin.GetAsync("/api/firmware/github")).ShouldBeProblemAsync(HttpStatusCode.NotFound, "firmware.import-off");
+        await (await ImportAsync(admin, "x4pro", 6)).ShouldBeProblemAsync(HttpStatusCode.NotFound, "firmware.import-off");
     }
 
     [Fact]
