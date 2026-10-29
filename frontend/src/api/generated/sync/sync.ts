@@ -649,3 +649,153 @@ export function useDownloadFile<TData = Awaited<ReturnType<typeof downloadFile>>
 
 
 
+export const getDeleteStoreUrl = (id: string,) => {
+
+
+
+
+  return `/api/sync/stores/${id}`
+}
+
+/**
+ * A device that still holds the store uploads it again on its next sync.
+ * @summary Delete one of your stores with all its copies.
+ */
+export const deleteStore = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getDeleteStoreUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getDeleteStoreMutationKey = () => ['deleteStore'] as const;
+
+export const getDeleteStoreMutationOptions = <TError = void,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteStore>>, TError,DeleteStoreMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteStore>>, TError,DeleteStoreMutationVariables, TContext> => {
+
+const mutationKey = getDeleteStoreMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteStore>>, DeleteStoreMutationVariables> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteStore(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteStoreMutationResult = NonNullable<Awaited<ReturnType<typeof deleteStore>>>
+
+    export type DeleteStoreMutationError = void
+    export type DeleteStoreMutationVariables = {id: string}
+
+    /**
+ * @summary Delete one of your stores with all its copies.
+ */
+export const useDeleteStore = <TError = void,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteStore>>, TError,DeleteStoreMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof deleteStore>>,
+        TError,
+        DeleteStoreMutationVariables,
+        TContext
+      > => {
+      return useMutation(getDeleteStoreMutationOptions(options), queryClient);
+    }
+    export const getDeleteStoreVersionUrl = (id: string,
+    version: string,) => {
+
+
+
+
+  return `/api/sync/stores/${id}/versions/${version}`
+}
+
+/**
+ * The newest one deleted, the copy below is what devices get; a device that holds more uploads it again.
+ * @summary Delete one copy of one of your stores; the last one deletes the store.
+ */
+export const deleteStoreVersion = async (id: string,
+    version: string, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getDeleteStoreVersionUrl(id,version),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getDeleteStoreVersionMutationKey = () => ['deleteStoreVersion'] as const;
+
+export const getDeleteStoreVersionMutationOptions = <TError = void,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteStoreVersion>>, TError,DeleteStoreVersionMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteStoreVersion>>, TError,DeleteStoreVersionMutationVariables, TContext> => {
+
+const mutationKey = getDeleteStoreVersionMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteStoreVersion>>, DeleteStoreVersionMutationVariables> = (props) => {
+          const {id,version} = props ?? {};
+
+          return  deleteStoreVersion(id,version,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteStoreVersionMutationResult = NonNullable<Awaited<ReturnType<typeof deleteStoreVersion>>>
+
+    export type DeleteStoreVersionMutationError = void
+    export type DeleteStoreVersionMutationVariables = {id: string;version: string}
+
+    /**
+ * @summary Delete one copy of one of your stores; the last one deletes the store.
+ */
+export const useDeleteStoreVersion = <TError = void,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteStoreVersion>>, TError,DeleteStoreVersionMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof deleteStoreVersion>>,
+        TError,
+        DeleteStoreVersionMutationVariables,
+        TContext
+      > => {
+      return useMutation(getDeleteStoreVersionMutationOptions(options), queryClient);
+    }

@@ -114,3 +114,24 @@ export const DownloadFileParams = zod.object({
 
 export const DownloadFileResponse = zod.unknown()
 
+/**
+ * A device that still holds the store uploads it again on its next sync.
+ * @summary Delete one of your stores with all its copies.
+ */
+export const DeleteStoreParams = zod.object({
+  "id": zod.string()
+})
+
+export const DeleteStoreResponse = zod.void()
+
+/**
+ * The newest one deleted, the copy below is what devices get; a device that holds more uploads it again.
+ * @summary Delete one copy of one of your stores; the last one deletes the store.
+ */
+export const DeleteStoreVersionParams = zod.object({
+  "id": zod.string(),
+  "version": zod.string()
+})
+
+export const DeleteStoreVersionResponse = zod.void()
+

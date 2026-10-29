@@ -15,5 +15,7 @@ internal static class SyncErrors
 
     public static readonly Error StoreNotFound = new("sync.store-not-found", "There is no such store.");
 
+    public static readonly Error VersionNotFound = new("sync.version-not-found", "The server keeps no such copy of this store.");
+
     public static readonly Error RequestInvalid = new("sync.request-invalid", "A store is named by its store id (16 hex), seed id (8 hex) and kind (1 or 2).");
 }

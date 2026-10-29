@@ -1,13 +1,14 @@
 "use client";
 
 import { useMemo, useState, type ReactNode } from "react";
-import { ChevronDown, ChevronRight, Database } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
+import { ChevronDown, ChevronRight, Database, Trash2 } from "lucide-react";
 import { errorMessage } from "@/api/errors";
 import { useGetMyDevices } from "@/api/generated/identity/identity";
 import type { StoreRow } from "@/api/generated/model";
-import { useGetStores } from "@/api/generated/sync/sync";
+import { deleteStore, getGetStoresQueryKey, useGetStores } from "@/api/generated/sync/sync";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   cipherLabel,
@@ -17,6 +18,7 @@ import {
   formatModified,
   storeKindLabel,
 } from "@/lib/stores";
+import { ConfirmDialog } from "../admin/users/confirm-dialog";
 import { StoreHistory } from "./store-history";
 
 const dateTime = new Intl.DateTimeFormat("en", { dateStyle: "medium", timeStyle: "short" });
@@ -61,11 +63,23 @@ export function StoresList() {
 
 function StoreCard({ store, names }: { store: StoreRow; names: ReadonlyMap<string, string> }) {
   const [open, setOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const queryClient = useQueryClient();
 
   return (
     <Card>
       <CardHeader>
         <CardTitle>{storeKindLabel(store.kind)}</CardTitle>
+        <CardAction>
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-label={`Delete store ${storeKindLabel(store.kind)}`}
+            onClick={() => setDeleting(true)}
+          >
+            <Trash2 aria-hidden />
+          </Button>
+        </CardAction>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
         <dl className="grid gap-x-8 gap-y-3 text-sm sm:grid-cols-2">
@@ -113,6 +127,25 @@ function StoreCard({ store, names }: { store: StoreRow; names: ReadonlyMap<strin
           )}
         </div>
       </CardContent>
+      {deleting && (
+        <ConfirmDialog
+          title={`Delete store ${storeKindLabel(store.kind)}?`}
+          description={
+            <>
+              The server drops all {store.versions} {store.versions === 1 ? "copy" : "copies"} of it
+              (store id <span className="font-mono">{store.storeId}</span>). Your devices keep
+              theirs: one that still holds the store uploads it again on its next sync.
+            </>
+          }
+          confirm="Delete"
+          destructive
+          onConfirm={async () => {
+            await deleteStore(store.id);
+            await queryClient.invalidateQueries({ queryKey: getGetStoresQueryKey() });
+          }}
+          onClose={() => setDeleting(false)}
+        />
+      )}
     </Card>
   );
 }

@@ -249,7 +249,9 @@ Here: how the server does it.
   counter, insert the version, drop those beyond `Sync:VersionsToKeep`. Two
   devices racing with one counter queue on the row: one wins, the other gets
   409. The head's nonce (random on every write) lets a device see two writes
-  of one counter. Plain stores (cipher 0) are refused.
+  of one counter. Plain stores (cipher 0) are refused. The owner deletes a
+  store or one copy under the same lock; the head falls to the copy below,
+  the last copy takes the store with it.
 - **Open**: the server certificate pinned on the device.
 
 ### 4.7 Identity

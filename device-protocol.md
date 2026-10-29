@@ -170,7 +170,9 @@ header of `store_header.h`: `vault.bin` (kind 2, passwords and TOTP) and
 
 The server keeps the last 20 copies of each store (`Sync:VersionsToKeep`),
 encrypted only (`cipher` 1: a plain store is refused), at most 256 KB a file
-(`Sync:MaxFileBytes`).
+(`Sync:MaxFileBytes`). The owner may delete a store or a copy from the UI:
+the head then falls (or the store is gone, `version` null), and a device
+holding more uploads its copy as usual.
 
 ### Choosing a store
 

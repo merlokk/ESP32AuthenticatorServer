@@ -122,6 +122,9 @@ modification time is shown, never compared.
   and its kept versions; never a file.
 - [ ] UC-36 Restore an old version from the UI. Open.
 - [ ] UC-37 A deleted user's stores go too (cross-module). Open.
+- [x] **UC-38 Delete from the UI.** The owner deletes a store with all its
+  copies, or one copy; the newest gone, the copy below is the head, the last
+  gone, the store goes. A device that holds more uploads it again.
 - [x] **UC-39 Stores to adopt.** A device lists the owner's stores (one seed
   id, or all), newest sync first, each with its newest copy's header and
   last sync: what a new or restored device chooses from.
