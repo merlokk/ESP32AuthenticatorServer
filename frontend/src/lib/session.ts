@@ -19,6 +19,14 @@ const CHUNK_SIZE = 4096 - 160;
 
 const nowSeconds = () => Math.floor(Date.now() / 1000);
 
+/**
+ * One JSON line on stdout per renewal (kubectl logs deploy/frontend): what was renewed and why,
+ * and what came of it. Never a token: the user id (sub), the path, statuses and cookie sizes.
+ */
+function logRenewal(level: "info" | "warn", fields: Record<string, unknown>): void {
+  console[level](JSON.stringify({ event: "bff.session-renewal", ...fields }));
+}
+
 function isSecure(request: Request): boolean {
   return publicUrl(request).protocol === "https:";
 }
@@ -57,9 +65,13 @@ export async function renewSession(session: JWT): Promise<JWT | undefined> {
       cache: "no-store",
     });
   } catch {
+    logRenewal("warn", { sub: session.sub, outcome: "backend-unreachable" });
     return undefined;
   }
-  if (!response.ok) return undefined;
+  if (!response.ok) {
+    logRenewal("warn", { sub: session.sub, outcome: "refused", tokenStatus: response.status });
+    return undefined;
+  }
 
   const answer = (await response.json()) as {
     access_token?: string;
@@ -122,12 +134,14 @@ export async function forwardWithSession(
   // Kept for a second attempt: forward reads the body.
   const again = session?.refreshToken ? request.clone() : undefined;
 
-  let renewed = session && !isFresh(session) ? await renewSession(session) : undefined;
+  let reason: "expired" | "refused" | undefined = session && !isFresh(session) ? "expired" : undefined;
+  let renewed = session && reason ? await renewSession(session) : undefined;
   const token = renewed?.accessToken ?? (session && isFresh(session) ? session.accessToken : undefined);
 
   let response = await forward(request, { ...options, accessToken: token });
 
   if (response.status === 401 && session && again && !renewed && token) {
+    reason = "refused";
     renewed = await renewSession(session);
     if (renewed) {
       await response.body?.cancel();
@@ -135,10 +149,22 @@ export async function forwardWithSession(
     }
   }
 
-  if (renewed) {
-    for (const cookie of await renewedSessionCookies(request, renewed)) {
-      response.headers.append("set-cookie", cookie);
-    }
+  const cookies = renewed ? await renewedSessionCookies(request, renewed) : [];
+  for (const cookie of cookies) {
+    response.headers.append("set-cookie", cookie);
+  }
+
+  if (reason && renewed) {
+    // A 401 here: the backend refuses the token it has just issued, and the client signs in again.
+    logRenewal(response.status === 401 ? "warn" : "info", {
+      sub: session?.sub,
+      reason,
+      method: request.method,
+      path: publicUrl(request).pathname,
+      status: response.status,
+      // A browser drops a cookie over ~4 KB; Auth.js chunks below that.
+      cookies: cookies.map((cookie) => cookie.split(";")[0].length),
+    });
   }
   return response;
 }

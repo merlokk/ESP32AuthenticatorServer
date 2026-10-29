@@ -485,7 +485,9 @@ Auth.js's and the one at the authorization server.
   concurrent renewals all succeed. `/sign-in/start` renews instead of
   trusting the session, else a refused token loops between the page and it.
   A session with a refresh token never shows `session.error`; a 401 that
-  survives renewal sends the browser to sign in.
+  survives renewal sends the browser to sign in. Each renewal logs one JSON
+  line (`bff.session-renewal`: sub, reason, path, status, cookie sizes;
+  never a token).
 
 ## 10. Open questions
 

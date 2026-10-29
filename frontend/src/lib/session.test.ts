@@ -2,7 +2,7 @@
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { encode, getToken, type JWT } from "next-auth/jwt";
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { forwardWithSession, renewedSessionCookies } from "./session";
 
 // A backend with OpenIddict's token endpoint (refresh grant) and one API call that takes the
@@ -51,8 +51,21 @@ beforeAll(async () => {
 
 afterAll(() => new Promise<void>((resolve) => server.close(() => resolve())));
 
+// The renewal log lines (console.info and console.warn), parsed.
+let logged: { level: string; line: Record<string, unknown> }[] = [];
+
 beforeEach(() => {
   renewals = [];
+  logged = [];
+  for (const level of ["info", "warn"] as const) {
+    vi.spyOn(console, level).mockImplementation((line: string) => {
+      logged.push({ level, line: JSON.parse(line) as Record<string, unknown> });
+    });
+  }
+});
+
+afterEach(() => {
+  vi.restoreAllMocks();
 });
 
 const now = () => Math.floor(Date.now() / 1000);
@@ -99,6 +112,7 @@ describe("forwardWithSession", () => {
     expect(response.headers.get("x-token")).toBe("fresh");
     expect(response.headers.getSetCookie()).toEqual([]);
     expect(renewals).toHaveLength(0);
+    expect(logged).toEqual([]);
   });
 
   it("renews an expired access token first and keeps the new one in the session cookie", async () => {
@@ -113,6 +127,10 @@ describe("forwardWithSession", () => {
     expect(session?.refreshToken).toBe("good");
     expect(session?.idToken).toBe("id");
     expect(session?.expiresAt).toBeGreaterThan(now() + 500);
+    expect(logged).toEqual([
+      { level: "info", line: expect.objectContaining({ event: "bff.session-renewal", reason: "expired", status: 200 }) },
+    ]);
+    expect(JSON.stringify(logged)).not.toMatch(/renewed-1|good|stale/);
   });
 
   it("renews and retries once, body and all, when the backend refuses a token not yet expired", async () => {
@@ -127,6 +145,7 @@ describe("forwardWithSession", () => {
     expect(response.headers.get("x-token")).toBe("renewed-1");
     expect(await response.text()).toBe('{"userName":"ada"}');
     expect((await sessionAfter(sent, response))?.accessToken).toBe("renewed-1");
+    expect(logged[0].line).toMatchObject({ reason: "refused", method: "POST", status: 200 });
   });
 
   it("passes the 401 on when the refresh token is refused too", async () => {
@@ -136,6 +155,7 @@ describe("forwardWithSession", () => {
     expect(response.status).toBe(401);
     expect(response.headers.getSetCookie()).toEqual([]);
     expect(renewals).toHaveLength(1);
+    expect(logged).toEqual([{ level: "warn", line: expect.objectContaining({ outcome: "refused", tokenStatus: 400 }) }]);
   });
 
   it("forwards without a token when there is no session", async () => {
