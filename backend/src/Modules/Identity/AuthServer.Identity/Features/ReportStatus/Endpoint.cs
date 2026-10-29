@@ -131,6 +131,9 @@ internal sealed class Endpoint(IdentityDbContext context, IFirmwareOffers firmwa
 /// <param name="Battery">Percent, 0 to 100.</param>
 /// <param name="Uptime">Seconds since boot.</param>
 /// <param name="Time">The device's clock, Unix seconds (0: no believable time).</param>
+/// <param name="PasswordsVersion">The version in vault.bin's header (the store's counter); missing without one.</param>
+/// <param name="PasskeysVersion">The same for fido.bin.</param>
+/// <param name="SeedId">The device's seed phrase id, 8 lower-case hex (as a store's seedId); missing without one.</param>
 internal sealed record ReportStatusRequest(
     string Firmware,
     string? Board,
@@ -139,7 +142,10 @@ internal sealed record ReportStatusRequest(
     bool? Ble,
     int? Battery,
     long? Uptime,
-    long? Time);
+    long? Time,
+    long? PasswordsVersion,
+    long? PasskeysVersion,
+    string? SeedId);
 
 /// <param name="Update">The board's active release when the device runs another version; else null.</param>
 /// <param name="Time">The server's clock, Unix seconds.</param>

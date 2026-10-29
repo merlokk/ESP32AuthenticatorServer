@@ -19,7 +19,10 @@ export const ReportStatusBody = zod.object({
   "ble": zod.boolean().nullish(),
   "battery": zod.int().nullish(),
   "uptime": zod.int().nullish(),
-  "time": zod.int().nullish()
+  "time": zod.int().nullish(),
+  "passwordsVersion": zod.int().nullish(),
+  "passkeysVersion": zod.int().nullish(),
+  "seedId": zod.string().nullish()
 })
 
 export const ReportStatusResponse = zod.object({

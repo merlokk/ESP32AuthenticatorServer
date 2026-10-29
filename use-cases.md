@@ -13,7 +13,7 @@ UC-2, 3 `RegistrationWindowTests`; UC-6 `DeviceSignInTests`; UC-8 `DeviceNameTes
 `Sync.Tests/Domain`); UC-38 `DeviceStatusTests` (+
 `Identity.Tests/Domain/FirmwareVersionTests`); UC-40
 `Host.Tests/PingEndpointTests`; UC-41 to 45 `FirmwareTests` (+
-`Firmware.Tests/Domain`).
+`Firmware.Tests/Domain`); UC-46 `StoreDeletionTests`.
 
 ## Identity
 
@@ -122,7 +122,7 @@ modification time is shown, never compared.
   and its kept versions; never a file.
 - [ ] UC-36 Restore an old version from the UI. Open.
 - [ ] UC-37 A deleted user's stores go too (cross-module). Open.
-- [x] **UC-38 Delete from the UI.** The owner deletes a store with all its
+- [x] **UC-46 Delete from the UI.** The owner deletes a store with all its
   copies, or one copy; the newest gone, the copy below is the head, the last
   gone, the store goes. A device that holds more uploads it again.
 - [x] **UC-39 Stores to adopt.** A device lists the owner's stores (one seed
@@ -137,7 +137,9 @@ The wire protocol: [device-protocol.md](device-protocol.md).
   BLE, battery and any other field, 4 KB at most); the report is kept, the
   device marked seen, and the answer names the board's active release when
   the device runs another version (UC-42), else null. The owner and the
-  admin see firmware and status with the device.
+  admin see firmware and status with the device, and the store versions and
+  seed id it reports; the owner sees each set against the server's newest
+  copy (synced, behind, ahead, not on server).
 - [x] **UC-40 Ping.** Anonymous: the server answers `ok` and its time.
 
 ## Firmware

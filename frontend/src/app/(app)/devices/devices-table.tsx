@@ -11,6 +11,7 @@ import {
   useGetMyDevices,
 } from "@/api/generated/identity/identity";
 import type { MyDevice } from "@/api/generated/model";
+import { useGetStores } from "@/api/generated/sync/sync";
 import { Button } from "@/components/ui/button";
 import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { statusSummary } from "@/lib/device-status";
@@ -25,6 +26,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { ConfirmDialog } from "../admin/users/confirm-dialog";
+import { DeviceStores } from "./device-stores";
 import { RenameDeviceDialog } from "./rename-device-dialog";
 
 const dateTimeFormat = new Intl.DateTimeFormat("en", { dateStyle: "medium", timeStyle: "short" });
@@ -34,6 +36,8 @@ export function DevicesTable() {
   const { data, error, isError, isFetching, isPending, refetch } = useGetMyDevices({
     query: { staleTime: 0, refetchInterval: 30_000 },
   });
+  // The server's side of the stores the devices report, polled as the stores page is.
+  const stores = useGetStores({ query: { refetchInterval: 30_000 } });
   const queryClient = useQueryClient();
   const [removing, setRemoving] = useState<MyDevice>();
   const [renaming, setRenaming] = useState<MyDevice>();
@@ -69,6 +73,7 @@ export function DevicesTable() {
                 <TableHead>Last seen</TableHead>
                 <TableHead>Firmware</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead>Stores</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -86,6 +91,9 @@ export function DevicesTable() {
                   </TableCell>
                   <TableCell className="font-mono text-xs">{device.firmware ?? "—"}</TableCell>
                   <TableCell className="text-xs">{statusSummary(device.status)}</TableCell>
+                  <TableCell className="text-xs">
+                    <DeviceStores status={device.status} stores={stores.data?.stores} />
+                  </TableCell>
                   <TableCell className="text-right whitespace-nowrap">
                     <Button
                       variant="ghost"

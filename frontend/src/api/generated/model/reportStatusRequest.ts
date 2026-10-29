@@ -21,4 +21,10 @@ export interface ReportStatusRequest {
   uptime?: number | null;
   /** @nullable */
   time?: number | null;
+  /** @nullable */
+  passwordsVersion?: number | null;
+  /** @nullable */
+  passkeysVersion?: number | null;
+  /** @nullable */
+  seedId?: string | null;
 }

@@ -15,6 +15,7 @@ import type { UserDevice, UserRow } from "@/api/generated/model";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { statusSummary } from "@/lib/device-status";
+import { DeviceStores } from "../../devices/device-stores";
 import { deviceName } from "@/lib/stores";
 import { RenameDeviceDialog } from "../../devices/rename-device-dialog";
 import { ConfirmDialog } from "./confirm-dialog";
@@ -55,6 +56,7 @@ export function UserDevices({ user }: { user: UserRow }) {
             <th className="py-1 pr-4 font-normal">Last seen</th>
             <th className="py-1 pr-4 font-normal">Firmware</th>
             <th className="py-1 pr-4 font-normal">Status</th>
+            <th className="py-1 pr-4 font-normal">Stores</th>
             <th className="py-1 font-normal">
               <span className="sr-only">Actions</span>
             </th>
@@ -74,6 +76,9 @@ export function UserDevices({ user }: { user: UserRow }) {
               </td>
               <td className="py-1 pr-4 font-mono text-xs">{device.firmware ?? "—"}</td>
               <td className="py-1 pr-4 text-xs">{statusSummary(device.status)}</td>
+              <td className="py-1 pr-4 text-xs">
+                <DeviceStores status={device.status} />
+              </td>
               <td className="py-1 text-right whitespace-nowrap">
                 <Button
                   variant="ghost"

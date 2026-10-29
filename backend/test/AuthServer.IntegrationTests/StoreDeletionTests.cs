@@ -3,7 +3,7 @@ using AuthServer.Sync.Tests;
 
 namespace AuthServer.IntegrationTests;
 
-// UC-38: the owner deletes a store with all its copies, or one copy; the head falls to the copy
+// UC-46: the owner deletes a store with all its copies, or one copy; the head falls to the copy
 // below, and a device that holds more uploads it again on its next sync.
 public sealed class StoreDeletionTests(IdentityFixture fixture) : IClassFixture<IdentityFixture>
 {
