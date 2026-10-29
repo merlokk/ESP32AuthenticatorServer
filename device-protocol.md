@@ -119,7 +119,10 @@ the web), so new firmware may add fields without a server change.
   "ble": false,
   "battery": 87,
   "uptime": 3600,
-  "time": 1793128050
+  "time": 1793128050,
+  "passwordsVersion": 57,
+  "passkeysVersion": 328,
+  "seedId": "4c8be86e"
 }
 ```
 
@@ -132,6 +135,8 @@ the web), so new firmware may add fields without a server change.
 | `battery` | percent |
 | `uptime` | seconds since boot |
 | `time` | the device's clock (0: none) |
+| `passwordsVersion`, `passkeysVersion` | the version in the header of the device's `vault.bin` / `fido.bin` (as in [Stores](#stores)); left out: no such store |
+| `seedId` | the device's seed phrase id (8 hex, the stores' `seedId`); left out: no phrase |
 
 ```json
 200 {"update": {"id": "01a17f4a-…", "version": "0.6.0-0-gabc1234",
