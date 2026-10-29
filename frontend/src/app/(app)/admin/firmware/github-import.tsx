@@ -65,7 +65,16 @@ export function GitHubImportDialog({
         <DialogHeader>
           <DialogTitle>Import from GitHub</DialogTitle>
           <DialogDescription>
-            Release images of <span className="font-mono">{repository}</span> for {board.name}. The
+            Release images of{" "}
+            <a
+              href={`https://github.com/${repository}/releases`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-mono"
+            >
+              {repository}
+            </a>{" "}
+            for {board.name}. The
             server fetches the file and checks it as an upload; it stays inactive.
           </DialogDescription>
         </DialogHeader>
