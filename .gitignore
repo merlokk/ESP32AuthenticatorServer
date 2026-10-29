@@ -10,6 +10,7 @@ secrets.json
 *.pem
 *.key
 *.pfx
+bench-device*.json
 
 # --- .NET ---
 [Bb]in/
