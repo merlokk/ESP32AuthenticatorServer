@@ -30,7 +30,12 @@ export function formatBytes(bytes: number): string {
   return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 }
 
-/** A device id as the person knows the device: its serial, or a removed one. */
-export function deviceLabel(id: string, serials: ReadonlyMap<string, string>): string {
-  return serials.get(id) ?? `a removed device (${id.slice(0, 8)})`;
+/** A device as the person knows it: the name they gave it, or its serial. */
+export function deviceName(device: { name?: string | null; serial: string }): string {
+  return device.name ?? device.serial;
+}
+
+/** A device id as the person knows the device: its name (or serial), or a removed one. */
+export function deviceLabel(id: string, names: ReadonlyMap<string, string>): string {
+  return names.get(id) ?? `a removed device (${id.slice(0, 8)})`;
 }

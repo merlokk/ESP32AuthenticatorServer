@@ -45,6 +45,7 @@ internal sealed class IdentityDbContext(DbContextOptions<IdentityDbContext> opti
             device.Property(entity => entity.Serial).HasColumnName("hardware_id").HasMaxLength(64);
             device.HasIndex(entity => entity.Serial).IsUnique().HasDatabaseName("ix_devices_hardware_id");
             device.Property(entity => entity.Mac).HasMaxLength(17);
+            device.Property(entity => entity.Name).HasMaxLength(AccountFields.MaximumDeviceNameLength);
             device.Property(entity => entity.Firmware).HasMaxLength(FirmwareVersion.MaximumLength);
             device.Property(entity => entity.Status).HasColumnType("jsonb");
             device.HasOne<ApplicationUser>().WithMany().HasForeignKey(entity => entity.UserId).OnDelete(DeleteBehavior.Cascade);

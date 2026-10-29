@@ -33,13 +33,14 @@ internal sealed class Endpoint(IdentityDbContext context) : EndpointWithoutReque
         var devices = await context.Devices
             .Where(device => device.UserId == id)
             .OrderBy(device => device.RegisteredAt)
-            .Select(device => new { device.Id, device.Serial, device.Mac, device.RegisteredAt, device.LastSeenAt, device.Firmware, device.Status })
+            .Select(device => new { device.Id, device.Name, device.Serial, device.Mac, device.RegisteredAt, device.LastSeenAt, device.Firmware, device.Status })
             .ToListAsync(cancellationToken);
 
         // The report is kept as text (jsonb) and handed back as the object the device sent.
         await Send.OkAsync(
             new UserDevicesResponse([.. devices.Select(device => new UserDevice(
                 device.Id,
+                device.Name,
                 device.Serial,
                 device.Mac,
                 device.RegisteredAt,
@@ -52,10 +53,12 @@ internal sealed class Endpoint(IdentityDbContext context) : EndpointWithoutReque
 
 internal sealed record UserDevicesResponse(IReadOnlyList<UserDevice> Devices);
 
+/// <param name="Name">What its owner calls it; null: unnamed.</param>
 /// <param name="Firmware">From the last status report (POST /api/device/status); null before one.</param>
 /// <param name="Status">The last status report as the device sent it; null before one.</param>
 internal sealed record UserDevice(
     Guid Id,
+    string? Name,
     string Serial,
     string Mac,
     DateTimeOffset RegisteredAt,

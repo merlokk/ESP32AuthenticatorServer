@@ -28,6 +28,8 @@ internal static class AccountFields
 
     public const int MaximumPasskeys = 10;
 
+    public const int MaximumDeviceNameLength = 64;
+
     public static Result<string> UserNameOf(string? value)
     {
         var name = (value ?? string.Empty).Trim();
@@ -67,6 +69,19 @@ internal static class AccountFields
         return name.Length is > 0 and <= MaximumPasskeyNameLength && !name.Any(char.IsControl)
             ? name
             : IdentityErrors.PasskeyNameInvalid;
+    }
+
+    /// <summary>A device's name, trimmed; empty clears it (null).</summary>
+    public static Result<string?> DeviceNameOf(string? value)
+    {
+        var name = (value ?? string.Empty).Trim();
+
+        if (name.Length > MaximumDeviceNameLength || name.Any(char.IsControl))
+        {
+            return IdentityErrors.DeviceNameInvalid;
+        }
+
+        return name.Length == 0 ? null : name;
     }
 
     private static bool IsUserNameCharacter(char character) =>

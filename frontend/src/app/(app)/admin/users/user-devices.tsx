@@ -2,18 +2,21 @@
 
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Trash2 } from "lucide-react";
+import { Pencil, Trash2 } from "lucide-react";
 import { errorMessage } from "@/api/errors";
 import {
   getGetUserDevicesQueryKey,
   getGetUsersQueryKey,
   removeUserDevice,
+  renameUserDevice,
   useGetUserDevices,
 } from "@/api/generated/identity/identity";
 import type { UserDevice, UserRow } from "@/api/generated/model";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { statusSummary } from "@/lib/device-status";
+import { deviceName } from "@/lib/stores";
+import { RenameDeviceDialog } from "../../devices/rename-device-dialog";
 import { ConfirmDialog } from "./confirm-dialog";
 
 const dateTimeFormat = new Intl.DateTimeFormat("en", { dateStyle: "medium", timeStyle: "short" });
@@ -26,6 +29,7 @@ export function UserDevices({ user }: { user: UserRow }) {
   });
   const queryClient = useQueryClient();
   const [removing, setRemoving] = useState<UserDevice>();
+  const [renaming, setRenaming] = useState<UserDevice>();
 
   if (isPending) return <Skeleton className="h-12 w-full" />;
   if (isError) {
@@ -44,6 +48,7 @@ export function UserDevices({ user }: { user: UserRow }) {
       <table className="w-full text-sm" aria-label={`Devices of ${user.userName}`}>
         <thead className="text-left text-xs text-muted-foreground">
           <tr>
+            <th className="py-1 pr-4 font-normal">Name</th>
             <th className="py-1 pr-4 font-normal">Serial</th>
             <th className="py-1 pr-4 font-normal">MAC</th>
             <th className="py-1 pr-4 font-normal">Registered</th>
@@ -58,6 +63,9 @@ export function UserDevices({ user }: { user: UserRow }) {
         <tbody>
           {data.devices.map((device) => (
             <tr key={device.id}>
+              <td className="py-1 pr-4 font-medium">
+                {device.name ?? <span className="font-normal text-muted-foreground">Unnamed</span>}
+              </td>
               <td className="py-1 pr-4 font-mono text-xs">{device.serial}</td>
               <td className="py-1 pr-4 font-mono text-xs">{device.mac}</td>
               <td className="py-1 pr-4">{dateTimeFormat.format(new Date(device.registeredAt))}</td>
@@ -66,11 +74,19 @@ export function UserDevices({ user }: { user: UserRow }) {
               </td>
               <td className="py-1 pr-4 font-mono text-xs">{device.firmware ?? "—"}</td>
               <td className="py-1 pr-4 text-xs">{statusSummary(device.status)}</td>
-              <td className="py-1 text-right">
+              <td className="py-1 text-right whitespace-nowrap">
                 <Button
                   variant="ghost"
                   size="icon-sm"
-                  aria-label={`Remove ${device.serial}`}
+                  aria-label={`Rename ${deviceName(device)}`}
+                  onClick={() => setRenaming(device)}
+                >
+                  <Pencil aria-hidden />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label={`Remove ${deviceName(device)}`}
                   className="text-destructive hover:text-destructive"
                   onClick={() => setRemoving(device)}
                 >
@@ -83,7 +99,7 @@ export function UserDevices({ user }: { user: UserRow }) {
       </table>
       {removing && (
         <ConfirmDialog
-          title={`Remove device ${removing.serial}?`}
+          title={`Remove device ${deviceName(removing)}?`}
           description={`It no longer signs in or syncs for ${user.userName}; the account and its stores stay. It may register again through a registration window.`}
           confirm="Remove"
           destructive
@@ -95,6 +111,16 @@ export function UserDevices({ user }: { user: UserRow }) {
             ]);
           }}
           onClose={() => setRemoving(undefined)}
+        />
+      )}
+      {renaming && (
+        <RenameDeviceDialog
+          device={renaming}
+          save={async (name) => {
+            await renameUserDevice(user.id, renaming.id, { name });
+            await queryClient.invalidateQueries({ queryKey: getGetUserDevicesQueryKey(user.id) });
+          }}
+          onClose={() => setRenaming(undefined)}
         />
       )}
     </>

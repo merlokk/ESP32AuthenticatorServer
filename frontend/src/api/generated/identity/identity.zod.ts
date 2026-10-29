@@ -81,6 +81,32 @@ export const SetBlockedBody = zod.object({
 export const SetBlockedResponse = zod.void()
 
 /**
+ * device.not-found: not this user's.
+ * @summary Name a user's device (admin); an empty name clears it.
+ */
+export const RenameUserDeviceParams = zod.object({
+  "userId": zod.string(),
+  "id": zod.string()
+})
+
+export const RenameUserDeviceBody = zod.object({
+  "name": zod.string().nullish()
+})
+
+export const RenameUserDeviceResponse = zod.void()
+
+/**
+ * Its token lapses within minutes; the user and their stores stay. device.not-found: not this user's.
+ * @summary Remove a user's device (admin); it signs in no more.
+ */
+export const RemoveUserDeviceParams = zod.object({
+  "userId": zod.string(),
+  "id": zod.string()
+})
+
+export const RemoveUserDeviceResponse = zod.void()
+
+/**
  * @summary Rename one of your passkeys.
  */
 export const RenamePasskeyParams = zod.object({
@@ -104,15 +130,17 @@ export const RemovePasskeyParams = zod.object({
 export const RemovePasskeyResponse = zod.void()
 
 /**
- * Its token lapses within minutes; the user and their stores stay. device.not-found: not this user's.
- * @summary Remove a user's device (admin); it signs in no more.
+ * @summary Name one of your devices; an empty name clears it.
  */
-export const RemoveUserDeviceParams = zod.object({
-  "userId": zod.string(),
+export const RenameMyDeviceParams = zod.object({
   "id": zod.string()
 })
 
-export const RemoveUserDeviceResponse = zod.void()
+export const RenameMyDeviceBody = zod.object({
+  "name": zod.string().nullish()
+})
+
+export const RenameMyDeviceResponse = zod.void()
 
 /**
  * Its token lapses within minutes; its stores stay. It may register again through a window. The last one may go too: a passkey still signs in.
@@ -205,6 +233,7 @@ export const GetUserDevicesParams = zod.object({
 export const GetUserDevicesResponse = zod.object({
   "devices": zod.array(zod.object({
   "id": zod.string(),
+  "name": zod.string().nullish(),
   "serial": zod.string(),
   "mac": zod.string(),
   "registeredAt": zod.iso.datetime({"offset":true}),
@@ -243,6 +272,7 @@ export const CompletePasskeyRegistrationResponse = zod.void()
 export const GetMyDevicesResponse = zod.object({
   "devices": zod.array(zod.object({
   "id": zod.string(),
+  "name": zod.string().nullish(),
   "serial": zod.string(),
   "mac": zod.string(),
   "registeredAt": zod.iso.datetime({"offset":true}),

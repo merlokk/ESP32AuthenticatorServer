@@ -12,6 +12,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   cipherLabel,
   deviceLabel,
+  deviceName,
   formatBytes,
   formatModified,
   storeKindLabel,
@@ -25,8 +26,8 @@ export function StoresList() {
   // Polled: a device may sync while the page is open.
   const stores = useGetStores({ query: { refetchInterval: 30_000 } });
   const devices = useGetMyDevices();
-  const serials = useMemo(
-    () => new Map((devices.data?.devices ?? []).map((device) => [device.id, device.serial])),
+  const names = useMemo(
+    () => new Map((devices.data?.devices ?? []).map((device) => [device.id, deviceName(device)])),
     [devices.data],
   );
 
@@ -52,13 +53,13 @@ export function StoresList() {
   return (
     <div className="flex flex-col gap-6">
       {stores.data.stores.map((store) => (
-        <StoreCard key={store.id} store={store} serials={serials} />
+        <StoreCard key={store.id} store={store} names={names} />
       ))}
     </div>
   );
 }
 
-function StoreCard({ store, serials }: { store: StoreRow; serials: ReadonlyMap<string, string> }) {
+function StoreCard({ store, names }: { store: StoreRow; names: ReadonlyMap<string, string> }) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -74,7 +75,7 @@ function StoreCard({ store, serials }: { store: StoreRow; serials: ReadonlyMap<s
           <Field label="Modified (device clock)">{formatModified(store.modified)}</Field>
           <Field label="Written by">
             <span className="font-mono text-xs">
-              {deviceLabel(store.uploadedByDeviceId, serials)}
+              {deviceLabel(store.uploadedByDeviceId, names)}
             </span>
           </Field>
           <Field label="Uploaded">{dateTime.format(new Date(store.uploadedAt))}</Field>
@@ -107,7 +108,7 @@ function StoreCard({ store, serials }: { store: StoreRow; serials: ReadonlyMap<s
           </Button>
           {open && (
             <div id={`history-${store.id}`} className="mt-2">
-              <StoreHistory store={store} serials={serials} />
+              <StoreHistory store={store} names={names} />
             </div>
           )}
         </div>

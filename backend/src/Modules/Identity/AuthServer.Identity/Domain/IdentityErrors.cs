@@ -14,6 +14,8 @@ internal static class IdentityErrors
 
     public static readonly Error DeviceNotFound = new("device.not-found", "There is no such device.");
 
+    public static readonly Error DeviceNameInvalid = new("device.name-invalid", "A device name is at most 64 characters.");
+
     public static readonly Error DeviceTaken = new("device.taken", "This device is registered to another account.");
 
     // One refusal for every cause: no account, wrong or reused code, lockout, blocked.

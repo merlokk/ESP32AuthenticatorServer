@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { cipherLabel, deviceLabel, formatBytes, formatModified, storeKindLabel } from "./stores";
+import {
+  cipherLabel,
+  deviceLabel,
+  deviceName,
+  formatBytes,
+  formatModified,
+  storeKindLabel,
+} from "./stores";
 
 describe("stores", () => {
   it("names the kinds and ciphers", () => {
@@ -20,9 +27,14 @@ describe("stores", () => {
     expect(formatBytes(1536 * 1024)).toBe("1.5 MB");
   });
 
-  it("names a device by its serial, or says it is gone", () => {
-    const serials = new Map([["01a1-device", "e81a7bc9"]]);
-    expect(deviceLabel("01a1-device", serials)).toBe("e81a7bc9");
-    expect(deviceLabel("0123456789abcdef", serials)).toBe("a removed device (01234567)");
+  it("names a device by its name, else its serial", () => {
+    expect(deviceName({ name: "Kitchen X4", serial: "e81a7bc9" })).toBe("Kitchen X4");
+    expect(deviceName({ name: null, serial: "e81a7bc9" })).toBe("e81a7bc9");
+  });
+
+  it("labels a device id by its name, or says it is gone", () => {
+    const names = new Map([["01a1-device", "Kitchen X4"]]);
+    expect(deviceLabel("01a1-device", names)).toBe("Kitchen X4");
+    expect(deviceLabel("0123456789abcdef", names)).toBe("a removed device (01234567)");
   });
 });

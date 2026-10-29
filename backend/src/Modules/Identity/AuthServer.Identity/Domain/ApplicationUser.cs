@@ -43,6 +43,9 @@ internal sealed class Device
 
     public string Mac { get; set; } = string.Empty;
 
+    /// <summary>What its owner calls it ("Kitchen X4"); null: unnamed, shown by its serial.</summary>
+    public string? Name { get; set; }
+
     /// <summary>Uncompressed SEC1 P-256 point, 65 bytes.</summary>
     public byte[] PublicKey { get; set; } = [];
 

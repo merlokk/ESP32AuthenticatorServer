@@ -23,10 +23,10 @@ const dateTime = new Intl.DateTimeFormat("en", { dateStyle: "medium", timeStyle:
  */
 export function StoreHistory({
   store,
-  serials,
+  names,
 }: {
   store: StoreRow;
-  serials: ReadonlyMap<string, string>;
+  names: ReadonlyMap<string, string>;
 }) {
   const { data, error, isError, isPending } = useGetStoreVersions(store.id, {
     query: { refetchInterval: 30_000 },
@@ -59,7 +59,7 @@ export function StoreHistory({
             <TableCell className="text-right tabular-nums">{version.version}</TableCell>
             <TableCell>{formatModified(version.modified)}</TableCell>
             <TableCell className="font-mono text-xs">
-              {deviceLabel(version.uploadedByDeviceId, serials)}
+              {deviceLabel(version.uploadedByDeviceId, names)}
             </TableCell>
             <TableCell>
               <span className="font-mono text-xs">{version.keyId}</span>

@@ -157,6 +157,11 @@ namespace AuthServer.Identity.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(17)")
                         .HasColumnName("mac");
 
+                    b.Property<string>("Name")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("name");
+
                     b.Property<byte[]>("PublicKey")
                         .IsRequired()
                         .HasColumnType("bytea")

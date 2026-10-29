@@ -16,7 +16,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { deviceLabel, storeKindLabel } from "@/lib/stores";
+import { deviceLabel, deviceName, storeKindLabel } from "@/lib/stores";
 
 const dateTime = new Intl.DateTimeFormat("en", { dateStyle: "medium", timeStyle: "short" });
 
@@ -26,8 +26,8 @@ export function RecentStores() {
   // Polled like the Stores page: a device may sync while the page is open.
   const stores = useGetStores({ query: { refetchInterval: 30_000 } });
   const devices = useGetMyDevices();
-  const serials = useMemo(
-    () => new Map((devices.data?.devices ?? []).map((device) => [device.id, device.serial])),
+  const names = useMemo(
+    () => new Map((devices.data?.devices ?? []).map((device) => [device.id, deviceName(device)])),
     [devices.data],
   );
   const rows = useMemo(
@@ -75,7 +75,7 @@ export function RecentStores() {
                   <TableCell className="text-right tabular-nums">{store.version}</TableCell>
                   <TableCell>{dateTime.format(new Date(store.uploadedAt))}</TableCell>
                   <TableCell className="font-mono text-xs">
-                    {deviceLabel(store.uploadedByDeviceId, serials)}
+                    {deviceLabel(store.uploadedByDeviceId, names)}
                   </TableCell>
                 </TableRow>
               ))}

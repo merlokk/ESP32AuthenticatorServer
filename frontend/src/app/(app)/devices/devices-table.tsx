@@ -2,17 +2,19 @@
 
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { RefreshCw, Trash2 } from "lucide-react";
+import { Pencil, RefreshCw, Trash2 } from "lucide-react";
 import { errorMessage } from "@/api/errors";
 import {
   getGetMyDevicesQueryKey,
   removeMyDevice,
+  renameMyDevice,
   useGetMyDevices,
 } from "@/api/generated/identity/identity";
 import type { MyDevice } from "@/api/generated/model";
 import { Button } from "@/components/ui/button";
 import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { statusSummary } from "@/lib/device-status";
+import { deviceName } from "@/lib/stores";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
@@ -23,6 +25,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { ConfirmDialog } from "../admin/users/confirm-dialog";
+import { RenameDeviceDialog } from "./rename-device-dialog";
 
 const dateTimeFormat = new Intl.DateTimeFormat("en", { dateStyle: "medium", timeStyle: "short" });
 
@@ -33,6 +36,7 @@ export function DevicesTable() {
   });
   const queryClient = useQueryClient();
   const [removing, setRemoving] = useState<MyDevice>();
+  const [renaming, setRenaming] = useState<MyDevice>();
 
   return (
     <Card>
@@ -58,6 +62,7 @@ export function DevicesTable() {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead>Name</TableHead>
                 <TableHead>Serial</TableHead>
                 <TableHead>MAC</TableHead>
                 <TableHead>Registered</TableHead>
@@ -70,6 +75,9 @@ export function DevicesTable() {
             <TableBody>
               {data.devices.map((device) => (
                 <TableRow key={device.id}>
+                  <TableCell className="font-medium">
+                    {device.name ?? <span className="text-muted-foreground">Unnamed</span>}
+                  </TableCell>
                   <TableCell className="font-mono text-xs">{device.serial}</TableCell>
                   <TableCell className="font-mono text-xs">{device.mac}</TableCell>
                   <TableCell>{dateTimeFormat.format(new Date(device.registeredAt))}</TableCell>
@@ -78,11 +86,19 @@ export function DevicesTable() {
                   </TableCell>
                   <TableCell className="font-mono text-xs">{device.firmware ?? "—"}</TableCell>
                   <TableCell className="text-xs">{statusSummary(device.status)}</TableCell>
-                  <TableCell className="text-right">
+                  <TableCell className="text-right whitespace-nowrap">
                     <Button
                       variant="ghost"
                       size="icon-sm"
-                      aria-label={`Remove ${device.serial}`}
+                      aria-label={`Rename ${deviceName(device)}`}
+                      onClick={() => setRenaming(device)}
+                    >
+                      <Pencil aria-hidden />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      aria-label={`Remove ${deviceName(device)}`}
                       className="text-destructive hover:text-destructive"
                       onClick={() => setRemoving(device)}
                     >
@@ -97,7 +113,7 @@ export function DevicesTable() {
       </CardContent>
       {removing && (
         <ConfirmDialog
-          title={`Remove device ${removing.serial}?`}
+          title={`Remove device ${deviceName(removing)}?`}
           description={
             <>
               It signs in and syncs no more; its stores stay on the server. To use it again,
@@ -113,6 +129,16 @@ export function DevicesTable() {
             await queryClient.invalidateQueries({ queryKey: getGetMyDevicesQueryKey() });
           }}
           onClose={() => setRemoving(undefined)}
+        />
+      )}
+      {renaming && (
+        <RenameDeviceDialog
+          device={renaming}
+          save={async (name) => {
+            await renameMyDevice(renaming.id, { name });
+            await queryClient.invalidateQueries({ queryKey: getGetMyDevicesQueryKey() });
+          }}
+          onClose={() => setRenaming(undefined)}
         />
       )}
     </Card>

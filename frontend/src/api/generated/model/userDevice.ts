@@ -7,6 +7,8 @@
 
 export interface UserDevice {
   id: string;
+  /** @nullable */
+  name?: string | null;
   serial: string;
   mac: string;
   registeredAt: string;
