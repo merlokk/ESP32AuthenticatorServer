@@ -52,8 +52,8 @@ export function SignInForm({ returnUrl }: { returnUrl: string }) {
     });
   }
 
-  // The authorization server's cookie is set: on to the code flow, by a full navigation.
-  // The authorization server's cookie is set: back into its flow, by a full navigation.
+  // The authorization server's cookie is set: back into its flow (or on to start it), by a full
+  // navigation.
   function proceed() {
     window.location.assign(isAuthorizeUrl(returnUrl) ? returnUrl : signInStartUrl(returnUrl));
   }
