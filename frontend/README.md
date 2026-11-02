@@ -29,5 +29,12 @@ npm run api:generate           # OpenAPI -> src/api/generated (needs the backend
 | `src/lib/backend.ts`                                           | the forwarding proxy (server-only)                                                             |
 | `src/lib/session.ts`                                           | the session's access token: renewed, the cookie rewritten (server-only)                        |
 | `src/api/fetch.ts`                                             | the mutator every generated call goes through                                                  |
+| `src/api/errors.ts`                                            | an `ApiError`'s code and message for the UI                                                    |
+| `src/app/providers.tsx`                                        | TanStack Query (an API 401 → `/sign-in/start`) and the theme                                   |
 | `src/lib/zod-resolver.ts`                                      | react-hook-form ↔ zod                                                                          |
+| `src/lib/webauthn.ts`                                          | the browser's WebAuthn JSON API, no package                                                    |
+| `src/lib/return-url.ts`                                        | same-origin `returnUrl` checks                                                                 |
+| `src/lib/*.ts` (others)                                        | UI helpers: device status, stores, registration window, durations, Gravatar, version           |
+| `src/components/client-only.tsx`                               | render after hydration only (Pitfalls in working-with-code.md)                                 |
 | `src/components/ui`                                            | shadcn/ui components (`npx shadcn add <name>`)                                                 |
+| `e2e/`, `orval.config.ts`                                      | Playwright tests; the Orval config                                                             |

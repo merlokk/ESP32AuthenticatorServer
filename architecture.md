@@ -30,7 +30,7 @@ store header (firmware `store_header.h`) and nothing else:
 | **version** (counter) | the order: upload accepted only above the head, rollback refusal |
 | **modification time** (UTC, 0 unknown) | shown, never compared (device clocks drift) |
 | key id, KDF iterations, payload length | shown (a key id change: a PIN or seed change) |
-| salt, nonce | stored as is, never interpreted |
+| salt, nonce | never interpreted; the nonce also in its own column (§4.6) |
 
 The header is the GCM associated data: the server cannot check it, the device
 does on download. A forged header gets a file refused by the device, never
@@ -77,12 +77,17 @@ Rules:
    everything else is `internal`.
 3. Cross-module calls are in-process: an interface from Contracts or a
    command over the FastEndpoints command bus. Never HTTP to itself.
-4. `*.Shared` (solution level) holds primitives only: `Result`, `Error`,
-   paging shapes. No entities, no domain logic.
+4. `*.Shared` (solution level) holds primitives only (today `Result`,
+   `Error`). No entities, no domain logic.
 5. No cross-module transaction; a cross-module side effect goes through an
    outbox row committed with the action and drained by a job.
 
-Enforced by architecture tests (ArchUnitNET), not by review.
+Architecture tests (`ModuleBoundaryTests`: ArchUnitNET and reflection)
+enforce the references (Shared knows no module, Contracts only Shared, a
+module only Shared and the Contracts it may use), a module's public surface
+(its `XxxModule` and Contracts), a Domain free of EF, HTTP and endpoints,
+and slices not calling slices. Rules 1, 3, 5 and "primitives only" in rule 4
+are kept by review.
 
 ## 4. Backend
 
@@ -108,15 +113,16 @@ Enforced by architecture tests (ArchUnitNET), not by review.
 
 Tests: `xunit` 2.9.3 + `xunit.runner.visualstudio` 4.0 +
 `Microsoft.NET.Test.Sdk` 18.11 (the trio pinned together), `Shouldly`
-(not FluentAssertions: v8 licence), `NSubstitute` (not Moq),
-`coverlet.collector`, `Microsoft.AspNetCore.Mvc.Testing` +
-`Testcontainers.PostgreSql` (real PostgreSQL, no in-memory provider),
-`TngTech.ArchUnitNET.xUnit`.
+(not FluentAssertions: v8 licence), `coverlet.collector`,
+`Microsoft.AspNetCore.Mvc.Testing` + `Testcontainers.PostgreSql` (real
+PostgreSQL, no in-memory provider), `TngTech.ArchUnitNET.xUnit`,
+`System.Formats.Cbor` (WebAuthn test authenticator). No mocking library.
 
 ### 4.2 Build settings
 
 `Directory.Build.props`: `net10.0`, `LangVersion latest`, `Nullable enable`,
 `ImplicitUsings enable`, `TreatWarningsAsErrors true`, `IsPackable false`.
+`Directory.Build.targets`: the Host's version from `git describe` (§4.5).
 `Directory.Packages.props`: central package management with transitive
 pinning; no `.csproj` carries a version. `NuGet.config`: `<clear />`,
 nuget.org only, package source mapping `*`.
@@ -127,6 +133,7 @@ nuget.org only, package source mapping `*`.
 backend/
 ├── AuthServer.slnx
 ├── Directory.Build.props
+├── Directory.Build.targets              # version from git
 ├── Directory.Packages.props
 ├── NuGet.config
 ├── Dockerfile                           # the backend image, context backend/
@@ -154,7 +161,8 @@ backend/
 
 One implementation project per module (folders, not an
 Api/Application/Domain/Infrastructure split). Today: `Host`, `Shared`,
-Identity (Contracts: `IdentityPolicies`), Sync (no Contracts yet: nothing
+Identity (Contracts: `IdentityPolicies`, `IdentityClaims`, `IdentityRoles`,
+`IdentityResources`), Sync (no Contracts yet: nothing
 calls it), Firmware (Contracts: `IFirmwareOffers`, for Identity), and the
 test projects.
 `backend/migrations.Dockerfile`
@@ -180,16 +188,18 @@ ports 3100 / 5180 / 5433 by default (`FRONTEND_PORT`, `BACKEND_PORT`,
 
 ### 4.4 Slices
 
-A slice is a folder in `Features/`: `Endpoint.cs`, `Contract.cs` (request),
-`Response.cs`; `Handler.cs` only when a second caller (a job, another module)
-needs the use case.
+A slice is a folder in `Features/` with one `Endpoint.cs`: the endpoint and
+its request and response records. A use case a second caller (a job,
+another module) needs gets its own class beside it (`OfferFirmware/Offers.cs`
+implements `IFirmwareOffers`).
 
 - A slice owns its DTOs; no DTO shared between slices.
 - Slices do not call slices: shared behaviour goes into `Domain/` or a
   horizontal service.
 - The endpoint is thin: route, auth policy, status codes.
-- Validation: request shape in value-object factories (`TryFrom`, `Create`
-  returning `Result`); business rules on the aggregate; uniqueness as a
+- Validation: request shape in `Domain/` helpers (a factory returning
+  `Result`, as `StoreKey.Create`, or a check such as `FirmwareVersion.IsValid`,
+  `AccountFields`), else in the endpoint; business rules on the aggregate; uniqueness as a
   pre-check **plus** a database constraint. FastEndpoints validators are
   singletons: never inject a scoped `DbContext` into one.
 - Expected failures are `Result` / `Error`, mapped to Problem Details; not
@@ -203,16 +213,20 @@ in `AuthServer.Identity.Contracts`): `account` (a user token), `admin`,
 `device` (a device token: has `device_id`). JwtBearer keeps the token's claim
 names (`MapInboundClaims = false`).
 
-Configured once in `Program.cs`, never by a module: FastEndpoints (module
-assemblies listed), Swagger (`ShortSchemaNames`, non-nullable properties
-required), `TimeProvider.System`, the command bus, one JwtBearer scheme,
+Configured once by the host (`Program.cs`, `Startup/`), never by a module:
+FastEndpoints (module assemblies listed), Swagger (`ShortSchemaNames`,
+non-nullable properties required), `TimeProvider.System`, the command bus,
+one JwtBearer scheme and the policies (`Startup/BearerAuthentication.cs`),
 `AddXxxModule()` per module, forwarded headers (behind ingress), TickerQ,
 OpenTelemetry metrics, health checks.
 
 | Route | Purpose |
 |---|---|
 | `/api/**` | FastEndpoints, `RoutePrefix = "api"` |
-| `/connect/**`, `/.well-known/**` | OpenIddict protocol endpoints |
+| `POST /register` | device registration, an Identity slice outside the prefix (`RoutePrefixOverride("")`) |
+| `/connect/**`, `/.well-known/**` | OpenIddict: `authorize`, `token`, `userinfo`, `endsession` are Identity slices in passthrough mode; `revocation` and discovery are OpenIddict's own |
+| `GET /api/device/ping` | `{"status":"ok","time":<unix s>}`, anonymous, `no-store`; minimal API, no database |
+| `/swagger/v1/swagger.json` | the OpenAPI document (Orval's input) |
 | `GET /api/version` | `{"version":"0.5.0-0-gb249c4e","commit":"<sha>"}`, anonymous; minimal API, not a slice (answers when composition fails). `version`: `git describe --tags --match=* --long` (CI and Docker pass `-p:Version`, a local build asks git; 0.0.0 without either); `commit`: from git, or `-p:SourceRevisionId` (Docker `COMMIT`), null without one |
 | `/health/live` | process only, no checks |
 | `/health/ready`, `/health` | PostgreSQL check |
@@ -235,8 +249,10 @@ Here: how the server does it.
 - Status (`POST /api/device/status`) is Identity's: the report is kept as sent
   (`devices.status`, jsonb, 4 KB at most) with its `firmware` read out, the
   device marked seen; the answer is Firmware's (`IFirmwareOffers`): the
-  board's active release when the reported version is another (string
-  equality, never ordering: activating an older release rolls back).
+  board's active release when the report names a `board` and another version
+  (string equality, never ordering: activating an older release rolls back).
+  A removed device's token is refused here and at `/api/device/me` (the row
+  is looked up); Sync and Firmware trust it until it lapses.
 - Firmware (`/api/firmware/releases` admin, `/api/device/firmware...` device)
   is Firmware's: an upload is checked as the firmware's OTA check does (ESP32-S3
   app image, segments, checksum, SHA-256, `Firmware:Project`) and named by its
@@ -252,9 +268,10 @@ Here: how the server does it.
   counter, insert the version, drop those beyond `Sync:VersionsToKeep`. Two
   devices racing with one counter queue on the row: one wins, the other gets
   409. The head's nonce (random on every write) lets a device see two writes
-  of one counter. Plain stores (cipher 0) are refused. The owner deletes a
-  store or one copy under the same lock; the head falls to the copy below,
-  the last copy takes the store with it.
+  of one counter. Plain stores (cipher 0) are refused. The owner deletes one
+  copy under the same lock (the head falls to the copy below, the last copy
+  takes the store with it), or a store with all its copies in one `delete`
+  (its row lock queues it against an upload).
 - **Open**: the server certificate pinned on the device.
 
 ### 4.7 Identity
@@ -301,14 +318,15 @@ database
 ├── schema identity   ← Identity DbContext only
 ├── schema sync       ← Sync DbContext only
 ├── schema firmware   ← Firmware DbContext only
-└── schema ticker     ← TickerQ's store, owned by the host
 ```
+
+TickerQ will add a `ticker` schema, owned by the host, with the first job.
 
 - Each `DbContext` sets `HasDefaultSchema` and keeps its own
   `__EFMigrationsHistory` in its schema.
 - `sync.stores`: a row per store (owner, store id, seed id, kind; unique),
   `head_version` the newest kept. `sync.store_versions`: the header fields,
-  the writer `device_id`, upload time and the whole file (`bytea`), unique
+  the writer (`uploaded_by_device`), the nonce, upload time and the whole file (`bytea`), unique
   (store, version), the last `Sync:VersionsToKeep` per store.
 - `firmware.releases`: board, version, descriptor fields, size, SHA-256,
   `active`, uploader, the image (`bytea`, storage `external`); unique (board,
@@ -362,9 +380,11 @@ a secret store in the cluster).
 }
 ```
 
-Each module binds a typed settings record once; no slice reads
-`IConfiguration`. Startup checks run as hosted services registered by
-factory, so an `efbundle` (which builds the service provider) never runs them.
+Each module binds a typed settings class once; no slice reads
+`IConfiguration`. Checks that need secrets (Identity: `PublicOrigin`,
+`TotpEncryptionKey`) run in a hosted service (`IdentityStartup`), so an
+`efbundle` (which builds the service provider, never starts it) skips them;
+Sync and Firmware check their defaults-backed values in `AddXxxModule`.
 
 ## 8. Security
 
@@ -375,7 +395,7 @@ factory, so an `efbundle` (which builds the service provider) never runs them.
 - A 6-digit PIN falls in minutes to anyone with the files **and** the seed
   phrase; the seed never reaches the server, so the files alone are 2^128
   work (firmware storage-encryption.md).
-- Rollback: the server never serves a version below what the device reports;
+- Rollback: the server never serves a version at or below what the device reports;
   the device also refuses it (its highest accepted version is in NVS).
 - Web sign-in: e-mail + device TOTP, or a passkey; no passwords. Tokens
   issued by OpenIddict, validated by JwtBearer. Devices: private_key_jwt.
@@ -417,10 +437,10 @@ browser (client components) ──► Next.js server (BFF) ──► backend /ap
 | UI | **shadcn/ui** (components copied into the repo) + `tailwindcss` 4, `lucide-react` icons | 4.3, 1.61 |
 | API client | `orval`: OpenAPI → TanStack Query hooks + zod schemas; no base URL, one `fetch` mutator | 8.45 |
 | Server state | `@tanstack/react-query`; live data by `refetchInterval` polling | 5.105 |
-| Forms, validation | `react-hook-form` + `zod` (generated where they mirror the contract, client-only rules composed on top); the resolver is ours, `src/lib/zod-resolver.ts`: `@hookform/resolvers`' optional peers make `npm install` and `npm ci` disagree | 7.91, 4.6 |
-| Passkeys | none: the native WebAuthn JSON API (`PublicKeyCredential.parseCreationOptionsFromJSON` ...); `@simplewebauthn/browser` only as a fallback | |
+| Forms, validation | `react-hook-form` + `zod` (form schemas by hand; Orval's generated zod schemas are not used yet); the resolver is ours, `src/lib/zod-resolver.ts`: `@hookform/resolvers`' optional peers make `npm install` and `npm ci` disagree | 7.91, 4.6 |
+| Passkeys | none: the native WebAuthn JSON API (`PublicKeyCredential.parseCreationOptionsFromJSON` ..., `src/lib/webauthn.ts`); a browser without it gets no passkey button | |
 | Theme | `next-themes`: a class on `<html>`, the system's by default | 0.4 |
-| Tests | `vitest` + `@testing-library/react`; `@playwright/test` e2e (virtual authenticator for passkeys) | 4.1, 16.3, 1.64 |
+| Tests | `vitest` + `@testing-library/react`; `@playwright/test` e2e (no backend) | 4.1, 16.3, 1.64 |
 | Quality | TypeScript strict, ESLint, Prettier | 5.9, 9.39, 3.9 |
 
 Every version is pinned exactly in `frontend/package.json` (`.npmrc`
@@ -428,13 +448,16 @@ Every version is pinned exactly in `frontend/package.json` (`.npmrc`
 refuses Node 25.
 
 **Layout** (`frontend/README.md` maps the files): `src/app/api/[...path]`,
-`src/app/connect/[...path]`, `src/app/.well-known/[...path]` are the
-forwarding routes over `src/lib/backend.ts` (server-only: hop-by-hop
-headers dropped, a browser `Authorization` never forwarded, cookies only on
-the OIDC routes, `X-Forwarded-Host/Proto` set); `src/app/health` is the
+`src/app/connect/[...path]`, `src/app/.well-known/[...path]` and the
+routes above are forwarding routes over `src/lib/backend.ts` (server-only:
+hop-by-hop headers dropped, a browser `Authorization` forwarded only on the
+device route, cookies only where a route sets `forwardCookies`: connect,
+sign-in, passkeys; `X-Forwarded-Host/Proto` set); `src/app/health` is the
 frontend's own probe; `src/api/fetch.ts` the Orval mutator (Problem Details
 → `ApiError`). `next.config.ts`: `output: "standalone"`, Cache Components
-on, so anything reading the session sits behind `<Suspense>`.
+on (anything reading the session sits behind `<Suspense>`),
+`partialPrefetching`, `skipTrailingSlashRedirect` (backend paths pass
+unchanged).
 
 **Image** (`frontend/Dockerfile`): `node:24-bookworm-slim`, `npm ci`,
 `next build`, runtime is `.next/standalone/server.js` with `static/` and
@@ -459,13 +482,14 @@ Auth.js's and the one at the authorization server.
   build, so a page loaded before a rollout would call one that is gone.
 - The app (`src/app/(app)`): sidebar (Dashboard, Devices, Stores; Admin → Users,
   Firmware, System for `canAdminister`), page, the user's menu (Gravatar, Profile, Sign out).
-  Dashboard: the device count and the most recently synced stores. Profile:
+  Dashboard: the device count and the stores, newest sync first. Profile:
   the user name and the passkeys (add, rename, remove). Firmware: the
   releases per board (upload, import from GitHub, activate, deactivate,
-  delete). Users: the list (a row opens to its devices); edit the user name, change
+  delete). Users: the list (a row opens to its devices: rename, remove); edit the user name, change
   the role, block or unblock,
   delete (role, block and delete not on one's own row), open the registration window for 1 h or 24 h or close it, invite
-  by e-mail (an existing address is said so: `user.email-taken`).
+  by e-mail (a taken address or user name is said so: `user.email-taken`,
+  `user.name-taken`).
   System shows both parts' versions and the running configuration
   (`GET /api/identity/configuration`, admin, read-only, secrets as set or
   not). The frontend's version is git's like the backend's: `VERSION`/
@@ -486,16 +510,18 @@ Auth.js's and the one at the authorization server.
   no token; the BFF reads it from the cookie (`src/lib/session.ts`).
 - **Token refresh** in the BFF, not in Auth.js's JWT callback (a server
   component cannot write the cookie). `/api/**` renews the access token with
-  the refresh token when it has expired, and once more, the request sent
+  the refresh token when it has none or it expires within 30 s, and once more, the request sent
   again, when the backend answers 401 before then (the signing key is per
   process: a restart refuses every earlier token); the session cookie is
   rewritten on the same response, chunked as Auth.js does. Not rolling, so
   concurrent renewals all succeed. `/sign-in/start` renews instead of
   trusting the session, else a refused token loops between the page and it.
   A session with a refresh token never shows `session.error`; a 401 that
-  survives renewal sends the browser to sign in. Each renewal logs one JSON
-  line (`bff.session-renewal`: sub, reason, path, status, cookie sizes;
-  never a token).
+  survives renewal sends the browser to sign in. Each renewal on `/api/**` logs
+  one JSON line (`bff.session-renewal`: sub, reason, method, path, status,
+  cookie sizes; never a token); a refused or unreachable renewal logs `sub`,
+  `outcome` (`refused`, `backend-unreachable`) and the token endpoint's
+  status.
 
 ## 10. Open questions
 

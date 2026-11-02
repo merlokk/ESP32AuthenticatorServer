@@ -52,7 +52,7 @@ can be.
 ## 5. CI
 
 [`.github/workflows/ci.yml`](.github/workflows/ci.yml), on every push to `main`,
-on `x.y.z` tags and on pull requests:
+on `x.y.z` tags, on pull requests and by hand (`workflow_dispatch`):
 
 1. `backend`: build + all tests (integration tests in Testcontainers).
 2. `frontend`: `npm ci` + `npm run check`. Not e2e: run it locally.

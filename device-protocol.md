@@ -10,14 +10,15 @@ it: [architecture.md](architecture.md) §4.6.
 
 - The server is `https://<server>`, the name the device is configured with. TLS
   ends at the ingress; every address below is on that origin.
-- Bodies are JSON (UTF-8) except where noted. Times are Unix seconds (int64).
+- Bodies are JSON (UTF-8) except where noted. Times are Unix seconds (int64),
+  except `uploadedAt` (ISO 8601) and the firmware's `built` (its own text).
   Ids from the store header are lower-case hex: store id 16 characters, seed
   id 8, key id 16, nonce 24.
 - A refusal is Problem Details (`application/problem+json`): branch on `type`
   (`urn:authserver:problem:<code>`), never on `title`. Codes are listed with
   each call and in [Errors](#errors).
-- A response may come without `Content-Length` (`Transfer-Encoding:
-  chunked`): the BFF passes the body through as a stream. Read to the end; the
+- A response comes without `Content-Length` (`Transfer-Encoding: chunked`):
+  the BFF passes the body through as a stream. Read to the end; the
   size of a piece is in `Content-Range`, of a store in its header.
 - `Authorization: Bearer <token>`: the device's access token (Sign-in). Calls
   without it are marked *anonymous*.
@@ -128,8 +129,8 @@ the web), so new firmware may add fields without a server change.
 
 | Field | Value |
 |---|---|
-| `firmware` | `esp_app_desc_t.version`: `x.y.z-<commits>-g<hash>[-dirty]` or `x.y.z-nogit`; 1–32 printable characters |
-| `board` | the build target (`devices/config.h` `BoardId`): `x4pro`, `dev`; without it nothing is offered |
+| `firmware` | `esp_app_desc_t.version`: `x.y.z-<commits>-g<hash>[-dirty]` or `x.y.z-nogit`; 1–32 printable ASCII, no space |
+| `board` | the build target (`devices/config.h` `BoardId`): `x4pro`, `dev`; any value of up to 16 printable characters is kept; only a board with an active release is offered one |
 | `mac` | Wi-Fi MAC |
 | `wifi`, `ble` | on or off |
 | `battery` | percent |
@@ -255,7 +256,7 @@ device has:
    409 names the server's newest: another device got there first. Download it
    and decide again; to win, write the store with version = server version +
    1. `400 sync.file-invalid` (not a store: magic `ESAF`, format 3, kind,
-   length), `400 sync.file-plain` (cipher 0), `413 sync.file-too-large`.
+   cipher, length), `400 sync.file-plain` (cipher 0), `413 sync.file-too-large`.
 4. **Download**: `GET /api/device/stores/files/{storeId}/{seedId}/{kind}?above=<the device's version>`.
 
    | Status | Body |

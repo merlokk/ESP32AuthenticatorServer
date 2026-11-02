@@ -3,17 +3,21 @@
 `[x]` done (tests green), `[ ]` not yet. Tests come first: a case is ticked when
 its tests pass. Mechanics: [architecture.md](architecture.md) §4.6, §4.7.
 
-Tests (`backend/test/AuthServer.IntegrationTests/` unless noted): UC-1, 4, 5, 7
-`DeviceRegistrationTests` (+ `Identity.Tests/Domain/DeviceRegistrationTests`);
-UC-2, 3 `RegistrationWindowTests`; UC-6 `DeviceSignInTests`; UC-8 `DeviceNameTests`, `DeviceRemovalTests`; UC-9
-`TotpSignInTests` (+ `Identity.Tests/Domain/TotpTests`); UC-10, 12, 13
-`PasskeyTests`; UC-11 `AuthorizationCodeFlowTests`, `RenewalTests`,
-`EphemeralSigningKeyTests`; UC-14 to 19 `UserAdministrationTests`; UC-20, 21
-`ProfileTests`; UC-22 `ConfigurationTests`; UC-30 to 35, 39 `SyncTests` (+
-`Sync.Tests/Domain`); UC-38 `DeviceStatusTests` (+
+Tests (`backend/test/AuthServer.IntegrationTests/` unless noted; `Identity.`
+is `AuthServer.Identity.Tests/`): UC-1, 4, 5, 7 `DeviceRegistrationTests` (+
+`Identity.Tests/Domain/DeviceRegistrationTests`, `Base32Tests`,
+`Infrastructure/TotpSecretProtectorTests`); UC-2, 3 `RegistrationWindowTests`
+(+ `Identity.Tests/Domain/AccountRuleTests`); UC-6 `DeviceSignInTests`; UC-8
+`DeviceNameTests`, `DeviceRemovalTests`; UC-9 `TotpSignInTests` (+
+`Identity.Tests/Domain/TotpTests`); UC-10, 12, 13 `PasskeyTests`; UC-11
+`AuthorizationCodeFlowTests`, `RenewalTests`, `EphemeralSigningKeyTests`; UC-14
+to 19 `UserAdministrationTests` (+ `AccountRuleTests`: last admin, field
+limits); UC-20, 21 `ProfileTests`; UC-22 `ConfigurationTests`; UC-30 to 35, 39
+`SyncTests` (+ `Sync.Tests/Domain`); UC-38 `DeviceStatusTests` (+
 `Identity.Tests/Domain/FirmwareVersionTests`); UC-40
 `Host.Tests/PingEndpointTests`; UC-41 to 45 `FirmwareTests` (+
-`Firmware.Tests/Domain`); UC-46 `StoreDeletionTests`.
+`Firmware.Tests/Domain`); UC-46 `StoreDeletionTests`. Numbers are ids, not an
+order: a case sits under its topic.
 
 ## Identity
 
@@ -26,7 +30,8 @@ closes it (null).
 
 - [x] **UC-1 First device makes the first admin.** While there are no
   users, a device registration needs no window: it creates the user (e-mail
-  from the device, user name = the e-mail's local part) with role `admin`.
+  from the device, user name = the e-mail's local part, other characters
+  than `A-Za-z0-9._-` as `-`, at most 64, else `user`) with role `admin`.
   Two racing first registrations leave exactly one admin.
 - [x] **UC-2 Admin invites a user.** Admin creates a user (e-mail, user name,
   role) with no devices; the window opens for `InviteWindow` (default 24 h).

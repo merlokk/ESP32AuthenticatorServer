@@ -34,7 +34,7 @@ commits, CI, release, deploy: [working-with-code.md](working-with-code.md).
 
 FastEndpoints (+ Swagger), EF Core 10 + Npgsql, PostgreSQL 18, ASP.NET Core
 Identity, OpenIddict, JwtBearer, TickerQ, OpenTelemetry (Prometheus),
-xunit + Shouldly + NSubstitute + Testcontainers + ArchUnitNET. Versions only
+xunit + Shouldly + Testcontainers + ArchUnitNET. Versions only
 in `backend/Directory.Packages.props`.
 
 ## Commands
@@ -103,7 +103,7 @@ Next.js 16 differs from older versions (`proxy.ts`, Cache Components): read
 - No secrets in git, `appsettings.Development.json` included.
 - Store ciphertext, PINs, seed phrases and tokens never in logs or error
   responses.
-- Never serve a store version below what the device reports (rollback).
+- Never serve a store version at or below what the device reports (rollback).
 - Frontend: the browser never calls the backend directly and never holds a
   token; nothing token-derived goes into the Auth.js session or a client
   component's props. npm versions pinned exactly.

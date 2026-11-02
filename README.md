@@ -8,10 +8,11 @@ hardware authenticator. It keeps each user's encrypted store files
 It reads only the plain store header (store id, seed id, version, modification
 time) and never serves a version older than the one a device already has.
 
-Status: early. Device registration, sign-in by device TOTP or passkey, user
-administration, and the server side of sync (the device API and the stores
-in the web UI; see [use-cases.md](use-cases.md)). The firmware's sync client
-is not written yet.
+Status: early. Device registration, web sign-in by device TOTP or passkey
+(OIDC), profile and user administration, the server side of sync (the device
+API and the stores in the web UI), device status and ping, firmware releases
+per board with OTA; see [use-cases.md](use-cases.md). The firmware's sync
+client is not written yet.
 
 ## Parts
 
@@ -54,6 +55,7 @@ CI ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) tests both halves an
 - [architecture.md](architecture.md): purpose, sync rule, modules, data,
   config, security, open questions.
 - [device-protocol.md](device-protocol.md): the API the firmware uses.
+- [use-cases.md](use-cases.md): use cases, done flags, their tests.
 - [CLAUDE.md](CLAUDE.md): commands and coding rules.
 - [working-with-code.md](working-with-code.md): flow, commits, CI, release, deploy.
 - [frontend/README.md](frontend/README.md): frontend file map.
