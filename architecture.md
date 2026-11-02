@@ -46,16 +46,17 @@ time first: it is to follow this rule.
 ## 2. Shape
 
 ```
-ESP32 device ──HTTPS (device API)──┐
-                                   ▼
-browser ── frontend (React) ── backend (.NET 10, one process) ── PostgreSQL
+ESP32 device ──HTTPS──┬───────────── /register ─────────────┐
+                      ▼                                     ▼
+browser ──► frontend (Next.js, BFF) ──► backend (.NET 10, one process) ── PostgreSQL
 ```
 
 - **backend/**: a **modular monolith**: one deployable, modules inside, one
   PostgreSQL database with a schema per module. Not microservices.
-- **frontend/**: React + TypeScript web UI. Libraries: **open** (§9).
-- Devices call the backend's device API directly; the browser only through
-  the frontend.
+- **frontend/**: Next.js + TypeScript web UI, its server half the BFF (§9).
+- Devices and browsers reach the same origin through the ingress: a device's
+  calls (`/api/device/**`) pass the BFF with the device's own token; only
+  `/register` is routed straight to the backend (§4.6).
 
 ## 3. Modules
 
@@ -97,7 +98,7 @@ Enforced by architecture tests (ArchUnitNET), not by review.
 | Authorization server (OIDC) | `OpenIddict.AspNetCore` + `OpenIddict.EntityFrameworkCore` 7.7 |
 | Token validation in modules | `Microsoft.AspNetCore.Authentication.JwtBearer` 10 (not OpenIddict `UseLocalServer()`: keeps Identity extractable); Identity hands it the signing key in-process |
 | Key ring | `Microsoft.AspNetCore.DataProtection.EntityFrameworkCore` 10 (in `identity`) |
-| Background jobs | `TickerQ` + `TickerQ.EntityFrameworkCore` 10.5, own `ticker` schema, no dashboard |
+| Background jobs | `TickerQ` + `TickerQ.EntityFrameworkCore` 10.5, own `ticker` schema, no dashboard; not wired yet (with the first job) |
 | Metrics | `OpenTelemetry.Extensions.Hosting` + `OpenTelemetry.Exporter.Prometheus.AspNetCore` (pre-release: exact pin) |
 | In-process dispatch | FastEndpoints command bus (no MediatR) |
 | Mapping | by hand; Mapperly if mapping grows (not AutoMapper) |
@@ -153,8 +154,9 @@ backend/
 
 One implementation project per module (folders, not an
 Api/Application/Domain/Infrastructure split). Today: `Host`, `Shared`,
-Identity, Sync (no Contracts yet: nothing calls it), Firmware (Contracts:
-`IFirmwareOffers`, for Identity), and the test projects.
+Identity (Contracts: `IdentityPolicies`), Sync (no Contracts yet: nothing
+calls it), Firmware (Contracts: `IFirmwareOffers`, for Identity), and the
+test projects.
 `backend/migrations.Dockerfile`
 + `backend/apply-migrations.sh` are the migrations image (§6).
 
@@ -170,10 +172,11 @@ variables (`ConnectionStrings__AuthServer`, ...).
 
 **Local stack** (`docker-compose.yml`, project `authserver`): `postgres:18`
 (volume `pgdata` at `/var/lib/postgresql`, `pg_isready` healthcheck),
-`backend`, `frontend` (healthcheck through `node`). Host ports 3100 / 5180 /
-5433 by default (`FRONTEND_PORT`, `BACKEND_PORT`, `POSTGRES_PORT` in `.env`),
-so the stack runs beside other local projects on 3000 / 5080 / 5432.
-`AUTH_SECRET` is required in `.env` (`.env.example`).
+`migrations` (§6), `backend`, `frontend` (healthcheck through `node`). Host
+ports 3100 / 5180 / 5433 by default (`FRONTEND_PORT`, `BACKEND_PORT`,
+`POSTGRES_PORT` in `.env`), so the stack runs beside other local projects on
+3000 / 5080 / 5432. `AUTH_SECRET` and `TOTP_ENCRYPTION_KEY` are required in
+`.env` (`.env.example`).
 
 ### 4.4 Slices
 
@@ -338,7 +341,6 @@ a secret store in the cluster).
 ```json
 {
   "ConnectionStrings": { "AuthServer": "" },
-  "Jobs": { "HistoryRetention": { "Succeeded": "2.00:00:00", "Unsuccessful": "30.00:00:00" } },
   "Identity": {
     "PublicOrigin": "",            // the browser's origin: issuer, WebAuthn relying party
     "ClientId": "authserver-web",
@@ -417,9 +419,9 @@ browser (client components) ──► Next.js server (BFF) ──► backend /ap
 | Server state | `@tanstack/react-query`; live data by `refetchInterval` polling | 5.105 |
 | Forms, validation | `react-hook-form` + `zod` (generated where they mirror the contract, client-only rules composed on top); the resolver is ours, `src/lib/zod-resolver.ts`: `@hookform/resolvers`' optional peers make `npm install` and `npm ci` disagree | 7.91, 4.6 |
 | Passkeys | none: the native WebAuthn JSON API (`PublicKeyCredential.parseCreationOptionsFromJSON` ...); `@simplewebauthn/browser` only as a fallback | |
-| Theme | a cookie read server-side (no `next-themes`) | |
+| Theme | `next-themes`: a class on `<html>`, the system's by default | 0.4 |
 | Tests | `vitest` + `@testing-library/react`; `@playwright/test` e2e (virtual authenticator for passkeys) | 4.1, 16.3, 1.64 |
-| Quality | TypeScript strict, ESLint, Prettier | 5.9, 9.39 |
+| Quality | TypeScript strict, ESLint, Prettier | 5.9, 9.39, 3.9 |
 
 Every version is pinned exactly in `frontend/package.json` (`.npmrc`
 `save-exact`). Node 24 LTS (the image); vitest stays on 4.1 because 5
@@ -456,8 +458,11 @@ Auth.js's and the one at the authorization server.
   No server actions in sign-in or sign-out: an action's id changes with every
   build, so a page loaded before a rollout would call one that is gone.
 - The app (`src/app/(app)`): sidebar (Dashboard, Devices, Stores; Admin → Users,
-  System for `canAdminister`), page, the user's menu (Gravatar, Profile, Sign out).
-  Users: the list (a row opens to its devices); edit the user name, change
+  Firmware, System for `canAdminister`), page, the user's menu (Gravatar, Profile, Sign out).
+  Dashboard: the device count and the most recently synced stores. Profile:
+  the user name and the passkeys (add, rename, remove). Firmware: the
+  releases per board (upload, import from GitHub, activate, deactivate,
+  delete). Users: the list (a row opens to its devices); edit the user name, change
   the role, block or unblock,
   delete (role, block and delete not on one's own row), open the registration window for 1 h or 24 h or close it, invite
   by e-mail (an existing address is said so: `user.email-taken`).
@@ -465,11 +470,14 @@ Auth.js's and the one at the authorization server.
   (`GET /api/identity/configuration`, admin, read-only, secrets as set or
   not). The frontend's version is git's like the backend's: `VERSION`/
   `COMMIT` build arguments (CI, Docker), else `git describe` in
-  `next.config.ts`, fixed at build. Devices: the list and the registration
-  window (open, extend, close; polled while open, a registration closes it).
+  `next.config.ts`, fixed at build. Devices: the list (rename, remove; the
+  last status, its store versions and seed id set against the server's
+  newest copy) and the registration window (open, extend, close; polled
+  while open, a registration closes it).
   Stores: each synced store's header (version, device-clock time, writer,
   cipher, size, PBKDF2 iterations, key id) and its kept versions, a key id
-  unlike the newest marked (a PIN or seed change).
+  unlike the newest marked (a PIN or seed change); a store or one copy can
+  be deleted.
   Without a session the layout sends the browser to `/sign-in/start`; an API
   401 (renewal refused too) does the same from the query cache. `/` goes to `/dashboard` when signed in.
 - `basePath: "/auth"`, not `/api/auth`: `/api/**` is the backend's.
@@ -496,5 +504,4 @@ Auth.js's and the one at the authorization server.
 - Deleting a user leaves their sync rows: a cross-module side effect (an
   outbox drained by a job, §3 rule 5).
 - Audit module.
-- Access token refresh in the BFF (§9).
 - Hosting: Kubernetes or a single host with Docker Compose.

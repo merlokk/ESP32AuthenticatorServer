@@ -9,7 +9,7 @@ phrase or the key; it reads only the plain store header.
 Status: backend host, the Identity module (device registration, TOTP and
 passkey sign-in, OIDC, user administration, profile) and the Sync module
 (device sync API, history), the Firmware module (releases per board, OTA);
-frontend: BFF proxy, Auth.js, sign-in, the app shell with dashboard, devices,
+device status and ping; frontend: BFF proxy, Auth.js, sign-in, the app shell with dashboard, devices,
 stores, profile and admin (users, firmware, system). Use cases with done flags:
 [use-cases.md](use-cases.md); tests come first.
 
@@ -21,8 +21,9 @@ stores, profile and admin (users, firmware, system). Use cases with done flags:
 - **frontend/**: Next.js + shadcn/ui + Tailwind, Orval + TanStack Query,
   react-hook-form + zod. Its server half is the BFF (Auth.js): tokens are
   issued by the backend only and never reach the browser.
-- Devices call the backend's device API directly; the browser goes through
-  the frontend.
+- Devices and browsers both go through the frontend: the BFF passes
+  `/api/device/**` with the device's own token; only `/register` is routed
+  straight to the backend.
 
 Purpose, modules, stack, layout, data, config, security, open questions:
 [architecture.md](architecture.md). Read it before writing code. What a device

@@ -47,7 +47,7 @@ function isFresh(session: JWT): boolean {
 
 /**
  * The session with a new access token from the refresh token, or undefined when the backend
- * refuses it (expired, revoked at sign-out, the account blocked or deleted) or does not answer.
+ * refuses it (expired, revoked, the account blocked or deleted) or does not answer.
  */
 export async function renewSession(session: JWT): Promise<JWT | undefined> {
   if (!session.refreshToken) return undefined;

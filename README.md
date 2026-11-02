@@ -20,8 +20,9 @@ is not written yet.
 | `backend/`  | .NET 10 modular monolith (Identity, Sync, Firmware), FastEndpoints, EF Core, PostgreSQL 18, OpenIddict |
 | `frontend/` | Next.js, shadcn/ui + Tailwind, TanStack Query; its server half is the BFF (Auth.js)          |
 
-Devices call the backend's device API directly. The browser talks only to the
-frontend; tokens are issued by the backend and never reach the browser.
+Devices and browsers both talk to the frontend: the BFF passes a device's calls
+through with its own token; only `/register` goes straight to the backend.
+Tokens are issued by the backend and never reach the browser.
 
 ## Run
 
@@ -42,11 +43,11 @@ dotnet run --project backend/src/AuthServer.Host   # http://localhost:5080
 cd frontend && npm ci && npm run dev               # http://localhost:3000, see frontend/.env.example
 ```
 
-Backend probes: `/health/live`, `/health/ready`, `/api/version`, `/metrics`.
+Backend probes: `/health/live`, `/health/ready`, `/health`, `/api/version`, `/metrics`.
 
 CI ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) tests both halves and pushes
 `ghcr.io/merlokk/esp32authenticatorserver-{backend,frontend,migrations}`: `sha-<short>` on every push,
-`latest` on main, `x.y.z` on an `x.y.z` tag (no `v`); the version is `git describe`.
+`latest` on main, `x.y.z` and `x.y` on an `x.y.z` tag (no `v`); the version is `git describe`.
 
 ## Docs
 
