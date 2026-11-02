@@ -31,7 +31,9 @@ beforeAll(async () => {
             }),
           );
         } else {
-          response.writeHead(400, { "content-type": "application/json" }).end('{"error":"invalid_grant"}');
+          response
+            .writeHead(400, { "content-type": "application/json" })
+            .end('{"error":"invalid_grant"}');
         }
         return;
       }
@@ -70,8 +72,13 @@ afterEach(() => {
 
 const now = () => Math.floor(Date.now() / 1000);
 
-async function request(session: JWT | null, init: { method?: string; body?: string; cookie?: string } = {}) {
-  const cookie = init.cookie ?? (session ? `${COOKIE}=${await encode({ token: session, secret: SECRET, salt: COOKIE })}` : "");
+async function request(
+  session: JWT | null,
+  init: { method?: string; body?: string; cookie?: string } = {},
+) {
+  const cookie =
+    init.cookie ??
+    (session ? `${COOKIE}=${await encode({ token: session, secret: SECRET, salt: COOKIE })}` : "");
   return new Request("http://localhost:3000/api/identity/me", {
     method: init.method ?? "GET",
     body: init.body,
@@ -85,7 +92,9 @@ async function sessionAfter(sent: Request, response: Response): Promise<JWT | nu
     (sent.headers.get("cookie") ?? "")
       .split("; ")
       .filter(Boolean)
-      .map((pair) => [pair.slice(0, pair.indexOf("=")), pair.slice(pair.indexOf("=") + 1)] as const),
+      .map(
+        (pair) => [pair.slice(0, pair.indexOf("=")), pair.slice(pair.indexOf("=") + 1)] as const,
+      ),
   );
   for (const cookie of response.headers.getSetCookie()) {
     const [pair, ...attributes] = cookie.split("; ");
@@ -105,7 +114,11 @@ const options = { forwardCookies: false, redirect: "follow" } as const;
 
 describe("forwardWithSession", () => {
   it("attaches a fresh access token as it is, renewing nothing", async () => {
-    const sent = await request({ accessToken: "fresh", refreshToken: "good", expiresAt: now() + 300 });
+    const sent = await request({
+      accessToken: "fresh",
+      refreshToken: "good",
+      expiresAt: now() + 300,
+    });
     const response = await forwardWithSession(sent, options);
 
     expect(response.status).toBe(200);
@@ -116,7 +129,12 @@ describe("forwardWithSession", () => {
   });
 
   it("renews an expired access token first and keeps the new one in the session cookie", async () => {
-    const sent = await request({ accessToken: "stale", refreshToken: "good", expiresAt: now() - 1, idToken: "id" });
+    const sent = await request({
+      accessToken: "stale",
+      refreshToken: "good",
+      expiresAt: now() - 1,
+      idToken: "id",
+    });
     const response = await forwardWithSession(sent, options);
 
     expect(response.status).toBe(200);
@@ -128,7 +146,14 @@ describe("forwardWithSession", () => {
     expect(session?.idToken).toBe("id");
     expect(session?.expiresAt).toBeGreaterThan(now() + 500);
     expect(logged).toEqual([
-      { level: "info", line: expect.objectContaining({ event: "bff.session-renewal", reason: "expired", status: 200 }) },
+      {
+        level: "info",
+        line: expect.objectContaining({
+          event: "bff.session-renewal",
+          reason: "expired",
+          status: 200,
+        }),
+      },
     ]);
     expect(JSON.stringify(logged)).not.toMatch(/renewed-1|good|stale/);
   });
@@ -149,13 +174,19 @@ describe("forwardWithSession", () => {
   });
 
   it("passes the 401 on when the refresh token is refused too", async () => {
-    const sent = await request({ accessToken: "rotated", refreshToken: "revoked", expiresAt: now() + 300 });
+    const sent = await request({
+      accessToken: "rotated",
+      refreshToken: "revoked",
+      expiresAt: now() + 300,
+    });
     const response = await forwardWithSession(sent, options);
 
     expect(response.status).toBe(401);
     expect(response.headers.getSetCookie()).toEqual([]);
     expect(renewals).toHaveLength(1);
-    expect(logged).toEqual([{ level: "warn", line: expect.objectContaining({ outcome: "refused", tokenStatus: 400 }) }]);
+    expect(logged).toEqual([
+      { level: "warn", line: expect.objectContaining({ outcome: "refused", tokenStatus: 400 }) },
+    ]);
   });
 
   it("forwards without a token when there is no session", async () => {
@@ -174,7 +205,9 @@ describe("renewedSessionCookies", () => {
     const holding = new Request("http://localhost:3000/", {
       headers: { cookie: chunked.map((cookie) => cookie.split("; ")[0]).join("; ") },
     });
-    expect((await getToken({ req: holding, secret: SECRET, secureCookie: false }))?.accessToken).toBe(large.accessToken);
+    expect(
+      (await getToken({ req: holding, secret: SECRET, secureCookie: false }))?.accessToken,
+    ).toBe(large.accessToken);
 
     const small = await renewedSessionCookies(holding, { ...large, accessToken: "small" });
     const response = new Response(null);
@@ -183,8 +216,13 @@ describe("renewedSessionCookies", () => {
   });
 
   it("uses the __Secure- name over https", async () => {
-    const secure = new Request("https://auth.example.com/api/x", { headers: { host: "auth.example.com" } });
-    const [cookie] = await renewedSessionCookies(secure, { accessToken: "a", expiresAt: now() + 600 });
+    const secure = new Request("https://auth.example.com/api/x", {
+      headers: { host: "auth.example.com" },
+    });
+    const [cookie] = await renewedSessionCookies(secure, {
+      accessToken: "a",
+      expiresAt: now() + 600,
+    });
     expect(cookie).toMatch(/^__Secure-authjs\.session-token=.*; Secure/);
   });
 });

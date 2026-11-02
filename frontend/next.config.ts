@@ -5,7 +5,9 @@ import type { NextConfig } from "next";
 // the Docker build (CI passes them), else git itself, else nothing. Fixed at build time.
 function git(command: string): string | undefined {
   try {
-    return execSync(`git ${command}`, { stdio: ["ignore", "pipe", "ignore"] }).toString().trim();
+    return execSync(`git ${command}`, { stdio: ["ignore", "pipe", "ignore"] })
+      .toString()
+      .trim();
   } catch {
     return undefined;
   }

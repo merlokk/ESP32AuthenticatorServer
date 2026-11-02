@@ -22,7 +22,8 @@ export async function GET(request: Request): Promise<Response> {
   const renewed = session ? await renewSession(session) : undefined;
   if (renewed) {
     const headers = new Headers({ location: target, "cache-control": "no-store" });
-    for (const cookie of await renewedSessionCookies(request, renewed)) headers.append("set-cookie", cookie);
+    for (const cookie of await renewedSessionCookies(request, renewed))
+      headers.append("set-cookie", cookie);
     return new Response(null, { status: 303, headers });
   }
 

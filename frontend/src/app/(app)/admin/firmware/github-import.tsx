@@ -74,8 +74,8 @@ export function GitHubImportDialog({
             >
               {repository}
             </a>{" "}
-            for {board.name}. The
-            server fetches the file and checks it as an upload; it stays inactive.
+            for {board.name}. The server fetches the file and checks it as an upload; it stays
+            inactive.
           </DialogDescription>
         </DialogHeader>
         {isPending ? (

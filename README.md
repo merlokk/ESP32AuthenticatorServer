@@ -15,10 +15,10 @@ is not written yet.
 
 ## Parts
 
-| Part        | Stack                                                                                       |
-| ----------- | ------------------------------------------------------------------------------------------- |
+| Part        | Stack                                                                                                  |
+| ----------- | ------------------------------------------------------------------------------------------------------ |
 | `backend/`  | .NET 10 modular monolith (Identity, Sync, Firmware), FastEndpoints, EF Core, PostgreSQL 18, OpenIddict |
-| `frontend/` | Next.js, shadcn/ui + Tailwind, TanStack Query; its server half is the BFF (Auth.js)          |
+| `frontend/` | Next.js, shadcn/ui + Tailwind, TanStack Query; its server half is the BFF (Auth.js)                    |
 
 Devices and browsers both talk to the frontend: the BFF passes a device's calls
 through with its own token; only `/register` goes straight to the backend.

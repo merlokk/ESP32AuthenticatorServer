@@ -38,11 +38,18 @@ function cookieName(request: Request): string {
 
 /** The session in the request's cookie, or null. */
 export async function readSession(request: Request): Promise<JWT | null> {
-  return getToken({ req: request, secret: process.env.AUTH_SECRET, secureCookie: isSecure(request) });
+  return getToken({
+    req: request,
+    secret: process.env.AUTH_SECRET,
+    secureCookie: isSecure(request),
+  });
 }
 
 function isFresh(session: JWT): boolean {
-  return Boolean(session.accessToken) && (!session.expiresAt || nowSeconds() < session.expiresAt - RENEW_MARGIN_SECONDS);
+  return (
+    Boolean(session.accessToken) &&
+    (!session.expiresAt || nowSeconds() < session.expiresAt - RENEW_MARGIN_SECONDS)
+  );
 }
 
 /**
@@ -97,7 +104,12 @@ export async function renewSession(session: JWT): Promise<JWT | undefined> {
  */
 export async function renewedSessionCookies(request: Request, session: JWT): Promise<string[]> {
   const name = cookieName(request);
-  const value = await encode({ token: session, secret: process.env.AUTH_SECRET ?? "", salt: name, maxAge: SESSION_MAX_AGE });
+  const value = await encode({
+    token: session,
+    secret: process.env.AUTH_SECRET ?? "",
+    salt: name,
+    maxAge: SESSION_MAX_AGE,
+  });
   const attributes = `Path=/; HttpOnly; SameSite=Lax${isSecure(request) ? "; Secure" : ""}`;
 
   const chunks =
@@ -115,7 +127,9 @@ export async function renewedSessionCookies(request: Request, session: JWT): Pro
     .filter((old) => old.startsWith(name) && !written.has(old));
 
   return [
-    ...chunks.map((chunk) => `${chunk.name}=${chunk.value}; ${attributes}; Max-Age=${SESSION_MAX_AGE}`),
+    ...chunks.map(
+      (chunk) => `${chunk.name}=${chunk.value}; ${attributes}; Max-Age=${SESSION_MAX_AGE}`,
+    ),
     ...stale.map((old) => `${old}=; ${attributes}; Max-Age=0`),
   ];
 }
@@ -134,9 +148,11 @@ export async function forwardWithSession(
   // Kept for a second attempt: forward reads the body.
   const again = session?.refreshToken ? request.clone() : undefined;
 
-  let reason: "expired" | "refused" | undefined = session && !isFresh(session) ? "expired" : undefined;
+  let reason: "expired" | "refused" | undefined =
+    session && !isFresh(session) ? "expired" : undefined;
   let renewed = session && reason ? await renewSession(session) : undefined;
-  const token = renewed?.accessToken ?? (session && isFresh(session) ? session.accessToken : undefined);
+  const token =
+    renewed?.accessToken ?? (session && isFresh(session) ? session.accessToken : undefined);
 
   let response = await forward(request, { ...options, accessToken: token });
 
