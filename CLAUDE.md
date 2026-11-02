@@ -72,7 +72,7 @@ Frontend (in `frontend/`; `.env.example` → `.env.local` first):
 ```powershell
 npm ci
 npm run dev                    # http://localhost:3000
-npm run check                  # typecheck + lint + vitest
+npm run check                  # typecheck + lint + prettier --check + vitest
 npm run e2e                    # Playwright, production build (npm run build first)
 npm run api:generate           # Orval, needs the backend's Swagger
 docker build -t authserver-frontend:dev frontend
